@@ -1,0 +1,17 @@
+[package]
+name = "nia_server"
+version = "0.1.0"
+authors = ["mirai"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+evdev-rs = "0.3.1"
+ws = "0.9.1"
+protobuf = { version = "2.14.0", features = ["with-bytes"] }
+nia_protocol_rust = { path = "../nia_protocol/nia_protocol_rust" }
+nia_interpreter_core = { path = "../nia_interpreter_core" }
+
+[build-dependencies]
+serde_json = "1.0.51"
