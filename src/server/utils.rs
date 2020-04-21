@@ -6,47 +6,6 @@ use nia_events::KeyId;
 const VERSION_MESSAGE: &'static str = "nia-server version '0.0.1'";
 const INFO_MESSAGE: &'static str = "Some not yet useful info";
 
-pub fn parse_request_key_chord_part(request_key_chord_part: &KeyChordPart) -> nia_events::KeyChordPart {
-    if request_key_chord_part.has_key_chord_part_1() {
-        let request_key_chord_part_1 = request_key_chord_part.get_key_chord_part_1();
-        let key_id = request_key_chord_part_1.get_key_id();
-
-        nia_events::KeyChordPart::Key1(KeyId::new(key_id as u16))
-    } else {
-        let request_key_chord_part_2 = request_key_chord_part.get_key_chord_part_2();
-        let keyboard_id = request_key_chord_part_2.get_keyboard_id();
-        let key_id = request_key_chord_part_2.get_key_id();
-
-        nia_events::KeyChordPart::Key2(
-            KeyboardId::new(keyboard_id as u16),
-            KeyId::new(key_id as u16),
-        )
-    }
-}
-
-pub fn parse_request_key_chord(request_key_chord: &KeyChord) -> nia_events::KeyChord {
-    let mut modifier_key_chord_parts = Vec::new();
-    let modifier_request_key_chord_parts = request_key_chord.get_modifiers();
-
-    for modifier_request_key_chord_part in modifier_request_key_chord_parts {
-        modifier_key_chord_parts.push(
-            parse_request_key_chord_part(modifier_request_key_chord_part)
-        );
-    }
-
-    let key_chord_part = parse_request_key_chord_part(
-        request_key_chord.get_key()
-    );
-
-    nia_events::KeyChord::new(modifier_key_chord_parts, key_chord_part)
-}
-
-pub fn parse_request_key_chords(request_key_chords: &[KeyChord]) -> Vec<nia_events::KeyChord> {
-    request_key_chords.iter()
-        .map(parse_request_key_chord)
-        .collect()
-}
-
 pub fn make_handshake_response() -> Response {
     let mut success_response = HandshakeResponse_SuccessResult::new();
     success_response.set_version(protobuf::Chars::from(String::from(VERSION_MESSAGE)));
@@ -127,161 +86,16 @@ pub fn make_get_device_info_response(request: GetDeviceInfoRequest) -> Response 
 }
 
 pub fn make_execute_code_response(
-    request: ExecuteCodeRequest,
-    interpreter: &mut Interpreter
+    result: String,
 ) -> Response {
-    let code = request.get_code();
-    let result = interpreter.execute(code);
-
     let mut execute_code_response = ExecuteCodeResponse::new();
+    let mut success_result = ExecuteCodeResponse_SuccessResult::new();
 
-    match result {
-        Ok(value) => {
-            let code_result = nia_interpreter_core::library::value_to_string(
-                interpreter,
-                value,
-            );
-
-            match code_result {
-                Ok(s) => {
-                    let mut success_result = ExecuteCodeResponse_SuccessResult::new();
-
-                    success_result.set_execution_result(protobuf::Chars::from(s));
-
-                    execute_code_response.set_success_result(success_result);
-                }
-                Err(error) => {
-                    if error.is_failure() {
-                        let mut failure_result = ExecuteCodeResponse_FailureResult::new();
-
-                        failure_result.set_message(
-                            protobuf::Chars::from(
-                                format!("{}", error)
-                            )
-                        );
-
-                        execute_code_response.set_failure_result(failure_result);
-                    } else {
-                        let mut error_result = ExecuteCodeResponse_ErrorResult::new();
-
-                        error_result.set_message(
-                            protobuf::Chars::from(
-                                format!("{}", error)
-                            )
-                        );
-
-                        execute_code_response.set_error_result(error_result);
-                    }
-                }
-            }
-        }
-        Err(error) => {
-            if error.is_failure() {
-                let mut failure_result = ExecuteCodeResponse_FailureResult::new();
-
-                failure_result.set_message(
-                    protobuf::Chars::from(
-                        format!("{}", error)
-                    )
-                );
-
-                execute_code_response.set_failure_result(failure_result);
-            } else {
-                let mut error_result = ExecuteCodeResponse_ErrorResult::new();
-
-                error_result.set_message(
-                    protobuf::Chars::from(
-                        format!("{}", error)
-                    )
-                );
-
-                execute_code_response.set_error_result(error_result);
-            }
-        }
-    }
+    success_result.set_execution_result(protobuf::Chars::from(result));
+    execute_code_response.set_success_result(success_result);
 
     let mut response = Response::new();
 
     response.set_execute_code_response(execute_code_response);
-    response
-}
-
-pub fn make_register_keyboard_response() -> Response {
-    let success_result = RegisterKeyboardResponse_SuccessResult::new();
-
-    let mut register_keyboard_response = RegisterKeyboardResponse::new();
-    register_keyboard_response.set_success_result(success_result);
-
-    let mut response = Response::new();
-    response.set_register_keyboard_response(register_keyboard_response);
-
-    response
-}
-
-pub fn make_define_modifier_response(success: bool) -> Response {
-    let mut define_modifier_response = DefineModifierResponse::new();
-
-    if success {
-        let success_result = DefineModifierResponse_SuccessResult::new();
-        define_modifier_response.set_success_result(success_result);
-    } else {
-        let error_result = DefineModifierResponse_ErrorResult::new();
-        define_modifier_response.set_error_result(error_result);
-    }
-
-    let mut response = Response::new();
-    response.set_define_modifier_response(define_modifier_response);
-
-    response
-}
-
-pub fn make_define_binding_response(success: bool) -> Response {
-    let mut define_binding_response = DefineBindingResponse::new();
-
-    if success {
-        let success_result = DefineBindingResponse_SuccessResult::new();
-        define_binding_response.set_success_result(success_result);
-    } else {
-        let error_result = DefineBindingResponse_ErrorResult::new();
-        define_binding_response.set_error_result(error_result);
-    }
-
-    let mut response = Response::new();
-    response.set_define_binding_response(define_binding_response);
-
-    response
-}
-
-pub fn make_start_listening_response(success: bool) -> Response {
-    let mut start_listening_response = StartListeningResponse::new();
-
-    if success {
-        let success_result = StartListeningResponse_SuccessResult::new();
-        start_listening_response.set_success_result(success_result);
-    } else {
-        let error_result = StartListeningResponse_ErrorResult::new();
-        start_listening_response.set_error_result(error_result);
-    }
-
-    let mut response = Response::new();
-    response.set_start_listening_response(start_listening_response);
-
-    response
-}
-
-pub fn make_stop_listening_response(success: bool) -> Response {
-    let mut stop_listening_response = StopListeningResponse::new();
-
-    if success {
-        let success_result = StopListeningResponse_SuccessResult::new();
-        stop_listening_response.set_success_result(success_result);
-    } else {
-        let error_result = StopListeningResponse_ErrorResult::new();
-        stop_listening_response.set_error_result(error_result);
-    }
-
-    let mut response = Response::new();
-    response.set_stop_listening_response(stop_listening_response);
-
     response
 }

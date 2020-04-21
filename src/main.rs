@@ -7,7 +7,6 @@ extern crate nia_events;
 mod error;
 mod commands;
 mod server;
-mod event_handler;
 
 fn main() {
     let mut s = server::Server::new();

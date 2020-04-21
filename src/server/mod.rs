@@ -8,12 +8,11 @@ use ws::listen;
 use protobuf::Message;
 
 use nia_protocol_rust::*;
-use nia_interpreter_core::Interpreter;
+use nia_interpreter_core::{Interpreter, EventLoop, InterpreterCommand, CommandResult};
 use nia_events::KeyId;
 use nia_events::KeyboardId;
 
 use crate::error::Error;
-use crate::event_handler::NiaEventHandler;
 
 pub use utils::*;
 
@@ -75,79 +74,18 @@ impl Server {
 
     fn on_execute_code_request(&self,
                                sender: &ws::Sender,
-                               message: ExecuteCodeRequest,
-                               interpreter: &mut Interpreter,
+                               message: String,
     ) -> Result<(), Error> {
         println!("Execute code request arrived: {:?}", message);
 
-        let execute_code_response = make_execute_code_response(message, interpreter);
+        let execute_code_response = make_execute_code_response(message);
 
         self.send_response(sender, execute_code_response)
-    }
-
-    fn on_register_keyboard_request(&self,
-                                    sender: &ws::Sender,
-                                    message: RegisterKeyboardRequest,
-    ) -> Result<(), Error> {
-        println!("Register keyboard request arrived: {:?}", message);
-
-        let register_keyboard_response = make_register_keyboard_response();
-
-        self.send_response(sender, register_keyboard_response)
-    }
-
-    fn on_define_modifier_request(&self,
-                                  sender: &ws::Sender,
-                                  message: DefineModifierRequest,
-    ) {
-        println!("Define modifier request arrived: {:?}", message);
-
-        let define_modifier_response = make_define_modifier_response(true);
-
-        self.send_response(sender, define_modifier_response);
-    }
-
-    fn on_define_binding_request(&self,
-                                 sender: &ws::Sender,
-                                 message: DefineBindingRequest,
-    ) {
-        println!("Define binding request arrived: {:?}", message);
-
-        let define_binding_response = make_define_binding_response(true);
-
-        self.send_response(sender, define_binding_response);
-    }
-
-    fn on_start_listening_request(
-        &self,
-        sender: &ws::Sender,
-        message: StartListeningRequest,
-        success: bool,
-    ) -> Result<(), Error> {
-        println!("Start listening request arrived: {:?}", message);
-
-        let start_listening_response = make_start_listening_response(success);
-
-        self.send_response(sender, start_listening_response)
-    }
-
-    fn on_stop_listening_request(
-        &self,
-        sender: &ws::Sender,
-        message: StopListeningRequest,
-        success: bool,
-    ) -> Result<(), Error> {
-        println!("Start listening request arrived: {:?}", message);
-
-        let stop_listening_response = make_stop_listening_response(success);
-
-        self.send_response(sender, stop_listening_response)
     }
 
     fn on_request(&self,
                   sender: &ws::Sender,
                   request: Request,
-                  interpreter: &mut Interpreter,
     ) -> Result<(), Error> {
         let mut request = request;
 
@@ -166,12 +104,6 @@ impl Server {
                 sender,
                 request.take_get_device_info_request(),
             )
-        } else if request.has_execute_code_request() {
-            self.on_execute_code_request(
-                sender,
-                request.take_execute_code_request(),
-                interpreter,
-            )
         } else {
             println!("Unknown request; {:?}, ignoring...", request);
 
@@ -180,15 +112,26 @@ impl Server {
     }
 
     pub fn start(&self) {
-        let mut event_handler = Arc::new(Mutex::new(NiaEventHandler::new()));
-        let tuple = Arc::new(Mutex::new(None));
+        let mut interpreter = Interpreter::new();
+        let (
+            interpreter_command_sender,
+            interpreter_command_result_receiver
+        ) = EventLoop::run_event_loop(interpreter);
 
-        let mut interpreter = Arc::new(Mutex::new(Interpreter::new()));
+        let interpreter_command_sender = Arc::new(Mutex::new(
+            interpreter_command_sender
+        ));
+        let interpreter_command_result_receiver = Arc::new(Mutex::new(
+            interpreter_command_result_receiver
+        ));
 
         listen("127.0.0.1:12112", |out| {
-            let interpreter = Arc::clone(&interpreter);
-            let tuple = Arc::clone(&tuple);
-            let event_handler = Arc::clone(&event_handler);
+            let interpreter_command_sender = Arc::clone(
+                &interpreter_command_sender
+            );
+            let interpreter_command_result_receiver = Arc::clone(
+                &interpreter_command_result_receiver
+            );
 
             move |msg| {
                 match msg {
@@ -197,94 +140,37 @@ impl Server {
 
                         let mut request = nia_protocol_rust::Request::new();
                         request.merge_from_bytes(&bytes);
-                        if request.has_register_keyboard_request() {
-                            let mut event_handler = event_handler.lock().unwrap();
 
-                            let register_keyboard_request = request.take_register_keyboard_request();
+                        if request.has_execute_code_request() {
+                            let execute_code_request = request.take_execute_code_request();
 
-                            let device_path = register_keyboard_request.get_device_path();
-                            let device_name = register_keyboard_request.get_device_name();
+                            let interpreter_command_sender = interpreter_command_sender
+                                .lock().unwrap();
 
-                            event_handler.add_keyboard(device_path, device_name);
+                            let interpreter_command_result_receiver = interpreter_command_result_receiver
+                                .lock().unwrap();
 
-                            let register_keyboard_request = request.take_register_keyboard_request();
-                            self.on_register_keyboard_request(
-                                &out,
-                                register_keyboard_request,
-                            );
-                        } else if request.has_define_modifier_request() {
-                            let mut event_handler = event_handler.lock().unwrap();
-                            let define_modifier_request = request.take_define_modifier_request();
+                            let code = String::from(execute_code_request.get_code());
+                            println!("Execution code: {}", code);
 
-                            let modifier = define_modifier_request.get_key_chord_part();
-                            let key_chord_part = parse_request_key_chord_part(
-                                modifier
-                            );
-                            event_handler.add_modifier(key_chord_part);
-
-                            let define_modifier_request = request.take_define_modifier_request();
-                            self.on_define_modifier_request(
-                                &out,
-                                define_modifier_request,
-                            );
-                        } else if request.has_define_binding_request() {
-                            let mut event_handler = event_handler.lock().unwrap();
-                            let define_binding_request = request.get_define_binding_request();
-
-                            let request_key_chords = define_binding_request.get_key_chords();
-                            let key_chords = parse_request_key_chords(
-                                request_key_chords
-                            );
-
-                            let action = crate::event_handler::Action::Empty;
-
-                            event_handler.add_mapping(key_chords, action);
-
-                            let define_binding_request = request.take_define_binding_request();
-                            self.on_define_binding_request(
-                                &out,
-                                define_binding_request,
-                            );
-                        } else if request.has_start_listening_request() {
-                            let event_handler = event_handler.lock().unwrap();
-                            let mut tuple = tuple.lock().unwrap();
-
-                            let success = if let Some(_) = *tuple {
-                                false
-                            } else {
-                                match event_handler.start_listening() {
-                                    Ok(t) => {
-                                        *tuple = Some(t);
-                                        true
-                                    }
-                                    Err(err) => {
-                                        false
-                                    }
+                            match interpreter_command_sender.send(InterpreterCommand::Execution(code)) {
+                                Ok(_) => {},
+                                Err(_) => {
+                                    // interpreter is dead now
                                 }
-                            };
+                            }
 
-                            let start_listening_request = request.take_start_listening_request();
-                            self.on_start_listening_request(&out, start_listening_request, success);
-                        } else if request.has_stop_listening_request() {
-                            let event_handler = event_handler.lock().unwrap();
-                            let mut tuple = tuple.lock().unwrap();
-
-                            let success = if let Some((_, _, stopper)) = tuple.as_ref() {
-                                stopper.send(());
-                                true
-                            } else {
-                                true
-                            };
-
-                            let stop_listening_request = request.take_stop_listening_request();
-                            self.on_stop_listening_request(
-                                &out,
-                                stop_listening_request,
-                                success,
-                            );
+                            match interpreter_command_result_receiver.recv() {
+                                Ok(CommandResult::ExecutionResult(result)) => {
+                                    let response = make_execute_code_response(result);
+                                    self.send_response(&out, response);
+                                },
+                                Err(_) => {
+                                    // interpreter is dead now
+                                }
+                            }
                         } else {
-                            let mut interpreter = interpreter.lock().unwrap();
-                            self.on_request(&out, request, &mut interpreter);
+                            self.on_request(&out, request);
                         }
                     }
                     ws::Message::Text(text) => {
