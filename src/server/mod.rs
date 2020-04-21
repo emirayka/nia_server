@@ -1,5 +1,7 @@
+mod utils;
+
 use std::thread;
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 use std::sync::Mutex;
 
 use ws::listen;
@@ -7,196 +9,282 @@ use protobuf::Message;
 
 use nia_protocol_rust::*;
 use nia_interpreter_core::Interpreter;
+use nia_events::KeyId;
+use nia_events::KeyboardId;
 
-const VERSION_MESSAGE: &'static str = "nia-server version '0.0.1'";
-const INFO_MESSAGE: &'static str = "Some not yet useful info";
+use crate::error::Error;
+use crate::event_handler::NiaEventHandler;
 
-pub struct Server {
-}
+pub use utils::*;
+
+
+pub struct Server {}
 
 impl Server {
     pub fn new() -> Server {
-        Server {
-        }
+        Server {}
     }
 }
 
 impl Server {
-    fn make_handshake_response(&self) -> Response {
-        let mut handshake_response = HandshakeResponse::new();
+    fn send_response(&self,
+                     sender: &ws::Sender,
+                     response: Response,
+    ) -> Result<(), Error> {
+        let bytes = response.write_to_bytes()
+            .map_err(|_| Error::unknown())?;
 
-        handshake_response.set_version(protobuf::Chars::from(String::from(VERSION_MESSAGE)));
-        handshake_response.set_info(protobuf::Chars::from(String::from(INFO_MESSAGE)));
+        sender.send(ws::Message::Binary(bytes))
+            .map_err(|_| Error::unknown())?;
 
-        let mut response = Response::new();
-
-        response.set_handshakeResponse(handshake_response);
-
-        response
+        Ok(())
     }
 
-    fn make_get_devices_response(&self) -> Response {
-        let mut get_devices_response = GetDevicesResponse::new();
-        let devices = crate::commands::get_devices()
-            .expect("Failure getting device list.");
-
-        let devices = devices.into_iter()
-            .map(|s: String| {
-                protobuf::Chars::from(s)
-            }).collect();
-
-        get_devices_response.set_devices(devices);
-
-        let mut response = Response::new();
-
-        response.set_getDevicesResponse(get_devices_response);
-
-        response
-    }
-
-    fn make_get_device_info_response(&self, request: GetDeviceInfoRequest) -> Response {
-        let device_path = request.get_device();
-        let device_info = crate::commands::get_device_info(device_path)
-            .expect("Failure getting device info");
-
-        let mut get_device_info_response = GetDeviceInfoResponse::new();
-
-        get_device_info_response.set_device(protobuf::Chars::from(String::from(device_path)));
-        get_device_info_response.set_name(protobuf::Chars::from(String::from(device_info.get_name())));
-        get_device_info_response.set_model(protobuf::Chars::from(String::from(device_info.get_model())));
-
-        let mut response = Response::new();
-
-        response.set_getDeviceInfoResponse(get_device_info_response);
-
-        response
-    }
-
-    fn make_execute_code_response(&self, request: ExecuteCodeRequest, interpreter: &mut Interpreter) -> Response {
-        let code = request.get_code();
-
-        let result = interpreter.execute(code);
-
-        let mut execute_code_response = ExecuteCodeResponse::new();
-
-        match result {
-            Ok(value) => {
-                let code_result = nia_interpreter_core::library::value_to_string(
-                    interpreter,
-                    value,
-                );
-
-                match code_result {
-                    Ok(s) => {
-                        execute_code_response.set_message(protobuf::Chars::from(s));
-                        execute_code_response.set_result(ExecuteCodeResponse_ExecutionResult::SUCCESS)
-                    }
-                    Err(error) => {
-                        if error.is_failure() {
-                            execute_code_response.set_result(ExecuteCodeResponse_ExecutionResult::FAILURE)
-                        } else {
-                            execute_code_response.set_result(ExecuteCodeResponse_ExecutionResult::ERROR)
-                        }
-
-                        execute_code_response.set_message(
-                            protobuf::Chars::from(
-                                format!("{}", error)
-                            )
-                        );
-                    }
-                }
-            }
-            Err(error) => {
-                if error.is_failure() {
-                    execute_code_response.set_result(ExecuteCodeResponse_ExecutionResult::FAILURE)
-                } else {
-                    execute_code_response.set_result(ExecuteCodeResponse_ExecutionResult::ERROR)
-                }
-
-                execute_code_response.set_message(
-                    protobuf::Chars::from(
-                        format!("{}", error)
-                    )
-                );
-            }
-        }
-
-        let mut response = Response::new();
-
-        response.set_executeCodeResponse(execute_code_response);
-
-        response
-    }
-}
-
-impl Server {
-    fn send_response(&self, sender: &ws::Sender, response: Response) {
-        let bytes = response.write_to_bytes().expect("Failure converting response to bytes");
-
-        sender.send(ws::Message::Binary(bytes)).expect("Failure sending response");
-    }
-
-    fn on_handshake_request(&self, sender: &ws::Sender, message: HandshakeRequest) {
+    fn on_handshake_request(&self,
+                            sender: &ws::Sender,
+                            message: HandshakeRequest,
+    ) -> Result<(), Error> {
         println!("Handshake request arrived: {:?}", message);
 
-        let handshake_response = self.make_handshake_response();
+        let handshake_response = make_handshake_response();
 
-        self.send_response(sender, handshake_response);
+        self.send_response(sender, handshake_response)
     }
 
-    fn on_get_devices_request(&self, sender: &ws::Sender, message: GetDevicesRequest) {
+    fn on_get_devices_request(&self,
+                              sender: &ws::Sender,
+                              message: GetDevicesRequest,
+    ) -> Result<(), Error> {
         println!("Get devices request arrived: {:?}", message);
 
-        let get_devices_response = self.make_get_devices_response();
+        let get_devices_response = make_get_devices_response();
 
-        self.send_response(sender, get_devices_response);
+        self.send_response(sender, get_devices_response)
     }
 
-    fn on_get_device_info_request(&self, sender: &ws::Sender, message: GetDeviceInfoRequest) {
+    fn on_get_device_info_request(&self,
+                                  sender: &ws::Sender,
+                                  message: GetDeviceInfoRequest,
+    ) -> Result<(), Error> {
         println!("Get device info request arrived: {:?}", message);
 
-        let get_device_info_response = self.make_get_device_info_response(message);
+        let get_device_info_response = make_get_device_info_response(message);
 
-        self.send_response(sender, get_device_info_response);
+        self.send_response(sender, get_device_info_response)
     }
 
-    fn on_execute_code_request(&self, sender: &ws::Sender, message: ExecuteCodeRequest, interpreter: &mut Interpreter) {
+    fn on_execute_code_request(&self,
+                               sender: &ws::Sender,
+                               message: ExecuteCodeRequest,
+                               interpreter: &mut Interpreter,
+    ) -> Result<(), Error> {
         println!("Execute code request arrived: {:?}", message);
 
-        let execute_code_response = self.make_execute_code_response(message, interpreter);
+        let execute_code_response = make_execute_code_response(message, interpreter);
 
-        self.send_response(sender, execute_code_response);
+        self.send_response(sender, execute_code_response)
     }
 
-    pub fn start_listening(&self) {
-        let interpreter = Arc::new(Mutex::new(Interpreter::new()));
+    fn on_register_keyboard_request(&self,
+                                    sender: &ws::Sender,
+                                    message: RegisterKeyboardRequest,
+    ) -> Result<(), Error> {
+        println!("Register keyboard request arrived: {:?}", message);
+
+        let register_keyboard_response = make_register_keyboard_response();
+
+        self.send_response(sender, register_keyboard_response)
+    }
+
+    fn on_define_modifier_request(&self,
+                                  sender: &ws::Sender,
+                                  message: DefineModifierRequest,
+    ) {
+        println!("Define modifier request arrived: {:?}", message);
+
+        let define_modifier_response = make_define_modifier_response(true);
+
+        self.send_response(sender, define_modifier_response);
+    }
+
+    fn on_define_binding_request(&self,
+                                 sender: &ws::Sender,
+                                 message: DefineBindingRequest,
+    ) {
+        println!("Define binding request arrived: {:?}", message);
+
+        let define_binding_response = make_define_binding_response(true);
+
+        self.send_response(sender, define_binding_response);
+    }
+
+    fn on_start_listening_request(
+        &self,
+        sender: &ws::Sender,
+        message: StartListeningRequest,
+        success: bool,
+    ) -> Result<(), Error> {
+        println!("Start listening request arrived: {:?}", message);
+
+        let start_listening_response = make_start_listening_response(success);
+
+        self.send_response(sender, start_listening_response)
+    }
+
+    fn on_stop_listening_request(
+        &self,
+        sender: &ws::Sender,
+        message: StopListeningRequest,
+        success: bool,
+    ) -> Result<(), Error> {
+        println!("Start listening request arrived: {:?}", message);
+
+        let stop_listening_response = make_stop_listening_response(success);
+
+        self.send_response(sender, stop_listening_response)
+    }
+
+    fn on_request(&self,
+                  sender: &ws::Sender,
+                  request: Request,
+                  interpreter: &mut Interpreter,
+    ) -> Result<(), Error> {
+        let mut request = request;
+
+        if request.has_handshake_request() {
+            self.on_handshake_request(
+                sender,
+                request.take_handshake_request(),
+            )
+        } else if request.has_get_devices_request() {
+            self.on_get_devices_request(
+                sender,
+                request.take_get_devices_request(),
+            )
+        } else if request.has_get_device_info_request() {
+            self.on_get_device_info_request(
+                sender,
+                request.take_get_device_info_request(),
+            )
+        } else if request.has_execute_code_request() {
+            self.on_execute_code_request(
+                sender,
+                request.take_execute_code_request(),
+                interpreter,
+            )
+        } else {
+            println!("Unknown request; {:?}, ignoring...", request);
+
+            Ok(())
+        }
+    }
+
+    pub fn start(&self) {
+        let mut event_handler = Arc::new(Mutex::new(NiaEventHandler::new()));
+        let tuple = Arc::new(Mutex::new(None));
+
+        let mut interpreter = Arc::new(Mutex::new(Interpreter::new()));
 
         listen("127.0.0.1:12112", |out| {
             let interpreter = Arc::clone(&interpreter);
+            let tuple = Arc::clone(&tuple);
+            let event_handler = Arc::clone(&event_handler);
 
             move |msg| {
-                let mut interpreter = interpreter.lock().unwrap();
-
                 match msg {
                     ws::Message::Binary(bytes) => {
                         println!("Binary message: {:?}", bytes);
 
-                        let mut request_message = nia_protocol_rust::Request::new();
+                        let mut request = nia_protocol_rust::Request::new();
+                        request.merge_from_bytes(&bytes);
+                        if request.has_register_keyboard_request() {
+                            let mut event_handler = event_handler.lock().unwrap();
 
-                        request_message.merge_from_bytes(&bytes);
+                            let register_keyboard_request = request.take_register_keyboard_request();
 
-                        if request_message.has_handshakeRequest() {
-                            let req = request_message.take_handshakeRequest();
-                            self.on_handshake_request(&out, req.clone());
-                            self.on_handshake_request(&out, req);
-                        } else if request_message.has_getDevicesRequest() {
-                            self.on_get_devices_request(&out, request_message.take_getDevicesRequest())
-                        } else if request_message.has_getDeviceInfoRequest() {
-                            self.on_get_device_info_request(&out, request_message.take_getDeviceInfoRequest())
-                        } else if request_message.has_executeCodeRequest() {
-                            self.on_execute_code_request(&out, request_message.take_executeCodeRequest(), &mut interpreter)
+                            let device_path = register_keyboard_request.get_device_path();
+                            let device_name = register_keyboard_request.get_device_name();
+
+                            event_handler.add_keyboard(device_path, device_name);
+
+                            let register_keyboard_request = request.take_register_keyboard_request();
+                            self.on_register_keyboard_request(
+                                &out,
+                                register_keyboard_request,
+                            );
+                        } else if request.has_define_modifier_request() {
+                            let mut event_handler = event_handler.lock().unwrap();
+                            let define_modifier_request = request.take_define_modifier_request();
+
+                            let modifier = define_modifier_request.get_key_chord_part();
+                            let key_chord_part = parse_request_key_chord_part(
+                                modifier
+                            );
+                            event_handler.add_modifier(key_chord_part);
+
+                            let define_modifier_request = request.take_define_modifier_request();
+                            self.on_define_modifier_request(
+                                &out,
+                                define_modifier_request,
+                            );
+                        } else if request.has_define_binding_request() {
+                            let mut event_handler = event_handler.lock().unwrap();
+                            let define_binding_request = request.get_define_binding_request();
+
+                            let request_key_chords = define_binding_request.get_key_chords();
+                            let key_chords = parse_request_key_chords(
+                                request_key_chords
+                            );
+
+                            let action = crate::event_handler::Action::Empty;
+
+                            event_handler.add_mapping(key_chords, action);
+
+                            let define_binding_request = request.take_define_binding_request();
+                            self.on_define_binding_request(
+                                &out,
+                                define_binding_request,
+                            );
+                        } else if request.has_start_listening_request() {
+                            let event_handler = event_handler.lock().unwrap();
+                            let mut tuple = tuple.lock().unwrap();
+
+                            let success = if let Some(_) = *tuple {
+                                false
+                            } else {
+                                match event_handler.start_listening() {
+                                    Ok(t) => {
+                                        *tuple = Some(t);
+                                        true
+                                    }
+                                    Err(err) => {
+                                        false
+                                    }
+                                }
+                            };
+
+                            let start_listening_request = request.take_start_listening_request();
+                            self.on_start_listening_request(&out, start_listening_request, success);
+                        } else if request.has_stop_listening_request() {
+                            let event_handler = event_handler.lock().unwrap();
+                            let mut tuple = tuple.lock().unwrap();
+
+                            let success = if let Some((_, _, stopper)) = tuple.as_ref() {
+                                stopper.send(());
+                                true
+                            } else {
+                                true
+                            };
+
+                            let stop_listening_request = request.take_stop_listening_request();
+                            self.on_stop_listening_request(
+                                &out,
+                                stop_listening_request,
+                                success,
+                            );
                         } else {
-                            panic!("Unexpected message: {:?}", bytes);
+                            let mut interpreter = interpreter.lock().unwrap();
+                            self.on_request(&out, request, &mut interpreter);
                         }
                     }
                     ws::Message::Text(text) => {

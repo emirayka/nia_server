@@ -12,6 +12,8 @@ ws = "0.9.1"
 protobuf = { version = "2.14.0", features = ["with-bytes"] }
 nia_protocol_rust = { path = "../nia_protocol/nia_protocol_rust" }
 nia_interpreter_core = { path = "../nia_interpreter_core" }
+nia_events = { path = "../nia_events" }
+nia_state_machine = { path = "../nia_state_machine" }
 
 [build-dependencies]
 serde_json = "1.0.51"

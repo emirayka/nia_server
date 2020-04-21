@@ -453,8 +453,10 @@ name = "nia_server"
 version = "0.1.0"
 dependencies = [
  "evdev-rs",
+ "nia_events",
  "nia_interpreter_core",
  "nia_protocol_rust",
+ "nia_state_machine",
  "protobuf",
  "serde_json",
  "ws",

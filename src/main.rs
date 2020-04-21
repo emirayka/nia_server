@@ -1,15 +1,18 @@
 extern crate protobuf;
+
 extern crate nia_protocol_rust;
 extern crate nia_interpreter_core;
+extern crate nia_events;
 
 mod error;
 mod commands;
 mod server;
+mod event_handler;
 
 fn main() {
     let mut s = server::Server::new();
 
-    s.start_listening();
+    s.start();
 
     // let device_info = commands::get_device_info(
     //     "/dev/input/event6"
