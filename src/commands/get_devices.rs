@@ -61,6 +61,10 @@ fn filter_device_paths(vector: Vec<String>) -> Result<Vec<String>, Error> {
             continue;
         }
 
+        if device.name() == Some("nia virtual input device") {
+            continue;
+        }
+
         result.push(device_path)
     }
 

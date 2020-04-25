@@ -72,17 +72,6 @@ impl Server {
         self.send_response(sender, get_device_info_response)
     }
 
-    fn on_execute_code_request(&self,
-                               sender: &ws::Sender,
-                               message: String,
-    ) -> Result<(), Error> {
-        println!("Execute code request arrived: {:?}", message);
-
-        let execute_code_response = make_execute_code_response(message);
-
-        self.send_response(sender, execute_code_response)
-    }
-
     fn on_request(&self,
                   sender: &ws::Sender,
                   request: Request,

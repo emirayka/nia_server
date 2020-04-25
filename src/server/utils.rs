@@ -1,5 +1,5 @@
 use nia_protocol_rust::*;
-use nia_interpreter_core::Interpreter;
+use nia_interpreter_core::{Interpreter, ExecutionResult};
 use nia_events::KeyboardId;
 use nia_events::KeyId;
 
@@ -86,13 +86,30 @@ pub fn make_get_device_info_response(request: GetDeviceInfoRequest) -> Response 
 }
 
 pub fn make_execute_code_response(
-    result: String,
+    result: ExecutionResult,
 ) -> Response {
     let mut execute_code_response = ExecuteCodeResponse::new();
-    let mut success_result = ExecuteCodeResponse_SuccessResult::new();
 
-    success_result.set_execution_result(protobuf::Chars::from(result));
-    execute_code_response.set_success_result(success_result);
+    match result {
+        ExecutionResult::Success(string_result) => {
+            let mut success_result = ExecuteCodeResponse_SuccessResult::new();
+
+            success_result.set_execution_result(protobuf::Chars::from(string_result));
+            execute_code_response.set_success_result(success_result);
+        },
+        ExecutionResult::Error(error_message) => {
+            let mut error_result = ExecuteCodeResponse_ErrorResult::new();
+
+            error_result.set_message(protobuf::Chars::from(error_message));
+            execute_code_response.set_error_result(error_result);
+        },
+        ExecutionResult::Failure(failure_message) => {
+            let mut failure_result = ExecuteCodeResponse_FailureResult::new();
+
+            failure_result.set_message(protobuf::Chars::from(failure_message));
+            execute_code_response.set_failure_result(failure_result);
+        }
+    }
 
     let mut response = Response::new();
 
