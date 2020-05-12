@@ -1,18 +1,71 @@
-#[derive(Clone, Copy, Debug)]
-pub enum ErrorKind {
-    Unknown,
+use nia_error::Error;
+use std::borrow::Borrow;
+
+#[derive(Clone, Debug)]
+pub enum NiaServerError {
+    UnknownError(String),
+    InvalidRequestError(String),
+    DeserializationError(String),
+    InterpreterError(String),
+
+    ProtobufError(),
 }
 
-#[derive(Clone, Copy, Debug)]
-pub struct Error {
-    kind: ErrorKind,
-}
+impl NiaServerError {
+    pub fn get_message(&self) -> String {
+        match (self) {
+            NiaServerError::UnknownError(s) => s.clone(),
+            NiaServerError::InvalidRequestError(s) => s.clone(),
+            NiaServerError::DeserializationError(s) => s.clone(),
+            NiaServerError::InterpreterError(s) => s.clone(),
 
-impl Error {
-    pub fn unknown() -> Error {
-        Error {
-            kind: ErrorKind::Unknown,
+            NiaServerError::ProtobufError() => String::from("Protobuf error"),
         }
+    }
+
+    pub fn unknown<S>(message: S) -> NiaServerError
+    where
+        S: Into<String>,
+    {
+        NiaServerError::UnknownError(message.into())
+    }
+
+    pub fn invalid_request<S>(message: S) -> NiaServerError
+    where
+        S: Into<String>,
+    {
+        NiaServerError::InvalidRequestError(message.into())
+    }
+
+    pub fn deserialization_error<S>(message: S) -> NiaServerError
+    where
+        S: Into<String>,
+    {
+        NiaServerError::DeserializationError(message.into())
+    }
+
+    pub fn interpreter_execution<S>(message: S) -> NiaServerError
+    where
+        S: Into<String>,
+    {
+        NiaServerError::InterpreterError(message.into())
+    }
+
+    pub fn protobuf_error(
+        protobuf_error: protobuf::ProtobufError,
+    ) -> NiaServerError {
+        NiaServerError::ProtobufError()
     }
 }
 
+impl<T> From<NiaServerError> for Result<T, NiaServerError> {
+    fn from(error: NiaServerError) -> Self {
+        Err(error)
+    }
+}
+
+pub fn from_protobuf_error(
+    protobuf_error: protobuf::ProtobufError,
+) -> NiaServerError {
+    NiaServerError::ProtobufError()
+}

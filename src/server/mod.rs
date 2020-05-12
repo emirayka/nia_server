@@ -1,21 +1,24 @@
 mod utils;
+use std::convert::TryFrom;
 
-use std::thread;
-use std::sync::{Arc, mpsc};
 use std::sync::Mutex;
+use std::sync::{mpsc, Arc};
+use std::thread;
 
-use ws::listen;
 use protobuf::Message;
+use ws::listen;
 
 use nia_protocol_rust::*;
-use nia_interpreter_core::{Interpreter, EventLoop, InterpreterCommand, CommandResult};
-use nia_events::KeyId;
-use nia_events::KeyboardId;
 
-use crate::error::Error;
+use nia_interpreter_core::EventLoop;
+use nia_interpreter_core::Interpreter;
+use nia_interpreter_core::NiaInterpreterCommand;
+use nia_interpreter_core::NiaInterpreterCommandResult;
 
+use crate::error::NiaServerError;
+
+use crate::protocol::{NiaRequest, NiaResponse};
 pub use utils::*;
-
 
 pub struct Server {}
 
@@ -26,150 +29,67 @@ impl Server {
 }
 
 impl Server {
-    fn send_response(&self,
-                     sender: &ws::Sender,
-                     response: Response,
-    ) -> Result<(), Error> {
-        let bytes = response.write_to_bytes()
-            .map_err(|_| Error::unknown())?;
+    fn send_response(
+        &self,
+        sender: &ws::Sender,
+        response: Response,
+    ) -> Result<(), NiaServerError> {
+        let bytes = response
+            .write_to_bytes()
+            .map_err(|_| NiaServerError::unknown(""))?;
 
-        sender.send(ws::Message::Binary(bytes))
-            .map_err(|_| Error::unknown())?;
+        sender
+            .send(ws::Message::Binary(bytes))
+            .map_err(|_| NiaServerError::unknown(""))?;
 
         Ok(())
     }
 
-    fn on_handshake_request(&self,
-                            sender: &ws::Sender,
-                            message: HandshakeRequest,
-    ) -> Result<(), Error> {
-        println!("Handshake request arrived: {:?}", message);
-
-        let handshake_response = make_handshake_response();
-
-        self.send_response(sender, handshake_response)
-    }
-
-    fn on_get_devices_request(&self,
-                              sender: &ws::Sender,
-                              message: GetDevicesRequest,
-    ) -> Result<(), Error> {
-        println!("Get devices request arrived: {:?}", message);
-
-        let get_devices_response = make_get_devices_response();
-
-        self.send_response(sender, get_devices_response)
-    }
-
-    fn on_get_device_info_request(&self,
-                                  sender: &ws::Sender,
-                                  message: GetDeviceInfoRequest,
-    ) -> Result<(), Error> {
-        println!("Get device info request arrived: {:?}", message);
-
-        let get_device_info_response = make_get_device_info_response(message);
-
-        self.send_response(sender, get_device_info_response)
-    }
-
-    fn on_request(&self,
-                  sender: &ws::Sender,
-                  request: Request,
-    ) -> Result<(), Error> {
-        let mut request = request;
-
-        if request.has_handshake_request() {
-            self.on_handshake_request(
-                sender,
-                request.take_handshake_request(),
-            )
-        } else if request.has_get_devices_request() {
-            self.on_get_devices_request(
-                sender,
-                request.take_get_devices_request(),
-            )
-        } else if request.has_get_device_info_request() {
-            self.on_get_device_info_request(
-                sender,
-                request.take_get_device_info_request(),
-            )
-        } else {
-            println!("Unknown request; {:?}, ignoring...", request);
-
-            Ok(())
-        }
-    }
-
     pub fn start(&self) {
         let mut interpreter = Interpreter::new();
-        let (
-            interpreter_command_sender,
-            interpreter_command_result_receiver
-        ) = EventLoop::run_event_loop(interpreter);
 
-        let interpreter_command_sender = Arc::new(Mutex::new(
-            interpreter_command_sender
-        ));
-        let interpreter_command_result_receiver = Arc::new(Mutex::new(
-            interpreter_command_result_receiver
-        ));
+        let event_loop_handle = EventLoop::run_event_loop(interpreter);
+        let event_loop_handle = Arc::new(Mutex::new(event_loop_handle));
 
         listen("127.0.0.1:12112", |out| {
-            let interpreter_command_sender = Arc::clone(
-                &interpreter_command_sender
-            );
-            let interpreter_command_result_receiver = Arc::clone(
-                &interpreter_command_result_receiver
-            );
+            let event_loop_handle = Arc::clone(&event_loop_handle);
 
             move |msg| {
                 match msg {
                     ws::Message::Binary(bytes) => {
-                        println!("Binary message: {:?}", bytes);
-
                         let mut request = nia_protocol_rust::Request::new();
                         request.merge_from_bytes(&bytes);
 
-                        if request.has_execute_code_request() {
-                            let execute_code_request = request.take_execute_code_request();
+                        println!("Got request: {:?}", request);
 
-                            let interpreter_command_sender = interpreter_command_sender
-                                .lock().unwrap();
-
-                            let interpreter_command_result_receiver = interpreter_command_result_receiver
-                                .lock().unwrap();
-
-                            let code = String::from(execute_code_request.get_code());
-                            println!("Execution code: {}", code);
-
-                            match interpreter_command_sender.send(InterpreterCommand::Execution(code)) {
-                                Ok(_) => {},
-                                Err(_) => {
-                                    // interpreter is dead now
-                                }
+                        let nia_request = match NiaRequest::try_from(request) {
+                            Ok(nia_request) => nia_request,
+                            Err(error) => {
+                                println!("Error occured: {:?}", error);
+                                println!("Ignoring request");
+                                return Ok(());
                             }
+                        };
 
-                            match interpreter_command_result_receiver.recv() {
-                                Ok(CommandResult::ExecutionResult(result)) => {
-                                    let response = make_execute_code_response(result);
-                                    self.send_response(&out, response);
-                                },
-                                Err(_) => {
-                                    // interpreter is dead now
-                                }
-                            }
-                        } else {
-                            self.on_request(&out, request);
-                        }
+                        let event_loop_handle =
+                            event_loop_handle.lock().unwrap();
+
+                        let nia_response =
+                            NiaResponse::from(nia_request, event_loop_handle);
+                        let response = nia_response.into();
+
+                        println!("Got response: {:?}", response);
+
+                        self.send_response(&out, response);
                     }
                     ws::Message::Text(text) => {
-                        println!("Text message: {:?}", text);
+                        println!("Text message arrived: {:?}", text);
                     }
                 }
 
                 Ok(())
             }
-        }).expect("Server failure: ws.");
+        })
+        .expect("Server failure: ws.");
     }
 }
-
