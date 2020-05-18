@@ -5,9 +5,10 @@ use nia_interpreter_core::NiaInterpreterCommand;
 use nia_interpreter_core::NiaInterpreterCommandResult;
 use nia_interpreter_core::{EventLoopHandle, NiaExecuteCodeCommandResult};
 
-use crate::error::NiaServerError;
+use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::protocol::NiaExecuteCodeRequest;
+use crate::protocol::{NiaExecuteCodeRequest, Serializable};
+use nia_protocol_rust::ExecuteCodeResponse;
 
 #[derive(Debug, Clone)]
 pub struct NiaExecuteCodeResponse {
@@ -77,9 +78,12 @@ impl NiaExecuteCodeResponse {
     }
 }
 
-impl From<NiaExecuteCodeResponse> for nia_protocol_rust::ExecuteCodeResponse {
-    fn from(nia_execute_code_response: NiaExecuteCodeResponse) -> Self {
-        let result = nia_execute_code_response.command_result;
+impl
+    Serializable<NiaExecuteCodeResponse, nia_protocol_rust::ExecuteCodeResponse>
+    for NiaExecuteCodeResponse
+{
+    fn to_pb(&self) -> ExecuteCodeResponse {
+        let result = &self.command_result;
 
         let mut execute_code_response =
             nia_protocol_rust::ExecuteCodeResponse::new();
@@ -90,26 +94,34 @@ impl From<NiaExecuteCodeResponse> for nia_protocol_rust::ExecuteCodeResponse {
                     nia_protocol_rust::ExecuteCodeResponse_SuccessResult::new();
 
                 success_result
-                    .set_message(protobuf::Chars::from(string_result));
+                    .set_message(protobuf::Chars::from(string_result.clone()));
                 execute_code_response.set_success_result(success_result);
             }
             NiaExecuteCodeCommandResult::Error(error_message) => {
                 let mut error_result =
                     nia_protocol_rust::ExecuteCodeResponse_ErrorResult::new();
 
-                error_result.set_message(protobuf::Chars::from(error_message));
-                execute_code_response.set_error_result(error_result);
+                error_result
+                    .set_message(protobuf::Chars::from(error_message.clone()));
+                execute_code_response.set_error_result(error_result.clone());
             }
             NiaExecuteCodeCommandResult::Failure(failure_message) => {
                 let mut failure_result =
                     nia_protocol_rust::ExecuteCodeResponse_FailureResult::new();
 
-                failure_result
-                    .set_message(protobuf::Chars::from(failure_message));
+                failure_result.set_message(protobuf::Chars::from(
+                    failure_message.clone(),
+                ));
                 execute_code_response.set_failure_result(failure_result);
             }
         }
 
         execute_code_response
+    }
+
+    fn from_pb(
+        object_pb: ExecuteCodeResponse,
+    ) -> NiaServerResult<NiaExecuteCodeResponse> {
+        unreachable!()
     }
 }

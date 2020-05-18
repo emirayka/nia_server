@@ -8,39 +8,47 @@ use evdev_rs::enums::EV_KEY;
 use evdev_rs::Device;
 
 use crate::error::NiaServerError;
-use crate::protocol::DeviceInfo;
+use crate::protocol::{DeviceInfo, DeviceModel};
 
-const KEYBOARD_MODELS_DIRECTORY: &'static str = "dist";
+const KEYBOARD_MODELS_DIRECTORY: &'static str = "keyboard_models";
 
 fn read_device_info_from_file(
-    file_name: &str,
+    device_id: i32,
     device_path: &str,
     device_name: &str,
+    file_name: &str,
 ) -> Result<DeviceInfo, NiaServerError> {
     let path = Path::new(KEYBOARD_MODELS_DIRECTORY).join(file_name);
-    // let path_str = path.to_str().ok_or_else(|| NiaServerError::unknown(""))?;
-    // let path_string = String::from(path_str);
 
     let string =
         fs::read_to_string(path).map_err(|_| NiaServerError::unknown(""))?;
 
     let device_info = DeviceInfo::new(
+        device_id,
+        false,
         device_path.to_string(),
         device_name.to_string(),
-        string,
+        DeviceModel::from_string(string)?,
     );
 
     Ok(device_info)
 }
 
 fn read_default_device_info(
+    device_id: i32,
     device_path: &str,
     device_name: &str,
 ) -> Result<DeviceInfo, NiaServerError> {
-    read_device_info_from_file("default.json", device_path, device_name)
+    read_device_info_from_file(
+        device_id,
+        device_path,
+        device_name,
+        "default.kbm",
+    )
 }
 
 fn find_device_info(
+    device_id: i32,
     device_name: &str,
     device_path: &str,
 ) -> Result<Option<DeviceInfo>, NiaServerError> {
@@ -66,9 +74,10 @@ fn find_device_info(
                 .to_string();
 
             let device_info = read_device_info_from_file(
-                &file_name,
+                device_id,
                 device_path,
                 device_name,
+                &file_name,
             )?;
 
             return Ok(Some(device_info));
@@ -78,7 +87,8 @@ fn find_device_info(
     Ok(None)
 }
 
-pub fn get_device_info(
+fn get_device_info(
+    device_id: i32,
     device_path: &str,
 ) -> Result<DeviceInfo, NiaServerError> {
     let fd = OpenOptions::new()
@@ -92,12 +102,28 @@ pub fn get_device_info(
     device.set_fd(fd).map_err(|_| NiaServerError::unknown(""))?;
 
     if let Some(device_name) = device.name() {
-        if let Some(device_info) = find_device_info(device_name, device_path)? {
+        if let Some(device_info) =
+            find_device_info(device_id, device_name, device_path)?
+        {
             return Ok(device_info);
         }
 
-        return read_default_device_info(device_path, device_name);
+        return read_default_device_info(device_id, device_path, device_name);
     }
 
-    read_default_device_info(device_path, "Unknown")
+    read_default_device_info(device_id, device_path, "Unknown")
+}
+
+pub fn get_devices_info(
+    device_paths: &Vec<String>,
+) -> Result<Vec<DeviceInfo>, NiaServerError> {
+    let mut result = Vec::new();
+
+    for (id, device_path) in device_paths.iter().enumerate() {
+        let device_info = get_device_info(id as i32, device_path)?;
+
+        result.push(device_info)
+    }
+
+    Ok(result)
 }

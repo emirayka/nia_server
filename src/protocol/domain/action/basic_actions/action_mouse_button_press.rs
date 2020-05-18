@@ -1,8 +1,8 @@
-use crate::error::{from_protobuf_error, NiaServerError};
+use crate::error::{from_protobuf_error, NiaServerError, NiaServerResult};
 use crate::protocol::Serializable;
 use protobuf::Message;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ActionMouseButtonPress {
     button_code: i32,
 }
@@ -34,11 +34,11 @@ impl
 
     fn from_pb(
         object_pb: nia_protocol_rust::ActionMouseButtonPress,
-    ) -> ActionMouseButtonPress {
+    ) -> NiaServerResult<ActionMouseButtonPress> {
         let action_mouse_button_press =
             ActionMouseButtonPress::new(object_pb.get_button_code());
 
-        action_mouse_button_press
+        Ok(action_mouse_button_press)
     }
 }
 

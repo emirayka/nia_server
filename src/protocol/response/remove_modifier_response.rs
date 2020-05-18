@@ -5,9 +5,10 @@ use nia_interpreter_core::NiaInterpreterCommand;
 use nia_interpreter_core::NiaInterpreterCommandResult;
 use nia_interpreter_core::{EventLoopHandle, NiaRemoveModifierCommandResult};
 
-use crate::error::NiaServerError;
+use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::protocol::NiaRemoveModifierRequest;
+use crate::protocol::{NiaRemoveModifierRequest, Serializable};
+use nia_protocol_rust::RemoveModifierResponse;
 
 #[derive(Debug, Clone)]
 pub struct NiaRemoveModifierResponse {
@@ -20,7 +21,7 @@ impl NiaRemoveModifierResponse {
         event_loop_handle: MutexGuard<EventLoopHandle>,
     ) -> Result<NiaRemoveModifierResponse, NiaServerError> {
         let (path, key_code) =
-            nia_remove_modifier_request.get_path_and_key_code();
+            nia_remove_modifier_request.get_device_id_and_key_code();
 
         let interpreter_command =
             NiaInterpreterCommand::make_remove_modifier_command(path, key_code);
@@ -79,11 +80,14 @@ impl NiaRemoveModifierResponse {
     }
 }
 
-impl From<NiaRemoveModifierResponse>
-    for nia_protocol_rust::RemoveModifierResponse
+impl
+    Serializable<
+        NiaRemoveModifierResponse,
+        nia_protocol_rust::RemoveModifierResponse,
+    > for NiaRemoveModifierResponse
 {
-    fn from(nia_remove_modifier_response: NiaRemoveModifierResponse) -> Self {
-        let result = nia_remove_modifier_response.command_result;
+    fn to_pb(&self) -> RemoveModifierResponse {
+        let result = &self.command_result;
 
         let mut remove_modifier_response =
             nia_protocol_rust::RemoveModifierResponse::new();
@@ -102,19 +106,27 @@ impl From<NiaRemoveModifierResponse>
                     nia_protocol_rust::RemoveModifierResponse_ErrorResult::new(
                     );
 
-                error_result.set_message(protobuf::Chars::from(error_message));
+                error_result
+                    .set_message(protobuf::Chars::from(error_message.clone()));
                 remove_modifier_response.set_error_result(error_result);
             }
             NiaRemoveModifierCommandResult::Failure(failure_message) => {
                 let mut failure_result =
                     nia_protocol_rust::RemoveModifierResponse_FailureResult::new();
 
-                failure_result
-                    .set_message(protobuf::Chars::from(failure_message));
+                failure_result.set_message(protobuf::Chars::from(
+                    failure_message.clone(),
+                ));
                 remove_modifier_response.set_failure_result(failure_result);
             }
         }
 
         remove_modifier_response
+    }
+
+    fn from_pb(
+        object_pb: RemoveModifierResponse,
+    ) -> NiaServerResult<NiaRemoveModifierResponse> {
+        unreachable!()
     }
 }

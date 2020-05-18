@@ -69,7 +69,7 @@ fn filter_device_paths(
     Ok(result)
 }
 
-pub fn get_devices() -> Result<Vec<String>, NiaServerError> {
+pub fn get_available_devices() -> Result<Vec<String>, NiaServerError> {
     let devices = get_device_paths()?;
 
     filter_device_paths(devices)

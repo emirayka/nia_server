@@ -6,7 +6,6 @@ use std::fmt::Formatter;
 pub enum RequestType {
     Handshake,
     GetDevices,
-    GetDeviceInfo,
     ExecuteCode,
     DefineKeyboard,
     RemoveKeyboardByPath,
@@ -23,7 +22,6 @@ impl std::fmt::Display for RequestType {
         let s = match self {
             RequestType::Handshake => "RequestType::Handshake",
             RequestType::GetDevices => "RequestType::GetDevices",
-            RequestType::GetDeviceInfo => "RequestType::GetDeviceInfo",
             RequestType::ExecuteCode => "RequestType::ExecuteCode",
             RequestType::DefineKeyboard => "RequestType::DefineKeyboard",
             RequestType::RemoveKeyboardByPath => {
@@ -51,15 +49,13 @@ impl GetRequestType for nia_protocol_rust::Request {
             RequestType::Handshake
         } else if self.has_get_devices_request() {
             RequestType::GetDevices
-        } else if self.has_get_device_info_request() {
-            RequestType::GetDeviceInfo
         } else if self.has_execute_code_request() {
             RequestType::ExecuteCode
-        } else if self.has_define_keyboard_request() {
+        } else if self.has_define_device_request() {
             RequestType::DefineKeyboard
-        } else if self.has_remove_keyboard_by_path_request() {
+        } else if self.has_remove_device_by_path_request() {
             RequestType::RemoveKeyboardByPath
-        } else if self.has_remove_keyboard_by_name_request() {
+        } else if self.has_remove_device_by_name_request() {
             RequestType::RemoveKeyboardByName
         } else if self.has_get_defined_modifiers_request() {
             RequestType::GetDefinedModifiers

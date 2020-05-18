@@ -4,7 +4,5 @@ mod server;
 mod utils;
 
 fn main() {
-    let mut s = server::Server::new();
-
-    s.start();
+    server::Server::new().start();
 }

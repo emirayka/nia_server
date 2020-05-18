@@ -1,8 +1,8 @@
-use crate::error::{from_protobuf_error, NiaServerError};
+use crate::error::{from_protobuf_error, NiaServerError, NiaServerResult};
 use crate::protocol::Serializable;
 use protobuf::Message;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ActionExecuteOSCommand {
     os_command: String,
 }
@@ -40,12 +40,12 @@ impl
 
     fn from_pb(
         object_pb: nia_protocol_rust::ActionExecuteOSCommand,
-    ) -> ActionExecuteOSCommand {
+    ) -> NiaServerResult<ActionExecuteOSCommand> {
         let action_execute_os_command = ActionExecuteOSCommand::new(
             String::from(object_pb.get_os_command()),
         );
 
-        action_execute_os_command
+        Ok(action_execute_os_command)
     }
 }
 

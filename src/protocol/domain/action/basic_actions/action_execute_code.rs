@@ -1,8 +1,8 @@
-use crate::error::{from_protobuf_error, NiaServerError};
+use crate::error::{from_protobuf_error, NiaServerError, NiaServerResult};
 use crate::protocol::Serializable;
 use protobuf::Message;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ActionExecuteCode {
     code: String,
 }
@@ -35,11 +35,11 @@ impl Serializable<ActionExecuteCode, nia_protocol_rust::ActionExecuteCode>
 
     fn from_pb(
         object_pb: nia_protocol_rust::ActionExecuteCode,
-    ) -> ActionExecuteCode {
+    ) -> NiaServerResult<ActionExecuteCode> {
         let action_execute_code =
             ActionExecuteCode::new(String::from(object_pb.get_code()));
 
-        action_execute_code
+        Ok(action_execute_code)
     }
 }
 

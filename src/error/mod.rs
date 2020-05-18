@@ -64,8 +64,18 @@ impl<T> From<NiaServerError> for Result<T, NiaServerError> {
     }
 }
 
+pub fn from_interpreter_error(
+    interpreter_error: nia_interpreter_core::Error,
+) -> NiaServerError {
+    let error_message = interpreter_error.to_string();
+
+    NiaServerError::InterpreterError(error_message)
+}
+
 pub fn from_protobuf_error(
     protobuf_error: protobuf::ProtobufError,
 ) -> NiaServerError {
     NiaServerError::ProtobufError()
 }
+
+pub type NiaServerResult<T> = Result<T, NiaServerError>;

@@ -5,9 +5,10 @@ use nia_interpreter_core::NiaInterpreterCommand;
 use nia_interpreter_core::NiaInterpreterCommandResult;
 use nia_interpreter_core::{EventLoopHandle, NiaDefineModifierCommandResult};
 
-use crate::error::NiaServerError;
+use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::protocol::NiaDefineModifierRequest;
+use crate::protocol::{NiaDefineModifierRequest, Serializable};
+use nia_protocol_rust::DefineModifierResponse;
 
 #[derive(Debug, Clone)]
 pub struct NiaDefineModifierResponse {
@@ -19,12 +20,12 @@ impl NiaDefineModifierResponse {
         nia_define_modifier_request: NiaDefineModifierRequest,
         event_loop_handle: MutexGuard<EventLoopHandle>,
     ) -> Result<NiaDefineModifierResponse, NiaServerError> {
-        let (keyboard_path, key_code, modifier_alias) =
+        let (device_id, key_code, modifier_alias) =
             nia_define_modifier_request.into_tuple();
 
         let interpreter_command =
             NiaInterpreterCommand::make_define_modifier_command(
-                keyboard_path,
+                device_id,
                 key_code,
                 modifier_alias,
             );
@@ -83,11 +84,14 @@ impl NiaDefineModifierResponse {
     }
 }
 
-impl From<NiaDefineModifierResponse>
-    for nia_protocol_rust::DefineModifierResponse
+impl
+    Serializable<
+        NiaDefineModifierResponse,
+        nia_protocol_rust::DefineModifierResponse,
+    > for NiaDefineModifierResponse
 {
-    fn from(nia_define_modifier_response: NiaDefineModifierResponse) -> Self {
-        let result = nia_define_modifier_response.command_result;
+    fn to_pb(&self) -> DefineModifierResponse {
+        let result = &self.command_result;
 
         let mut define_modifier_response =
             nia_protocol_rust::DefineModifierResponse::new();
@@ -107,19 +111,27 @@ impl From<NiaDefineModifierResponse>
                     nia_protocol_rust::DefineModifierResponse_ErrorResult::new(
                     );
 
-                error_result.set_message(protobuf::Chars::from(error_message));
+                error_result
+                    .set_message(protobuf::Chars::from(error_message.clone()));
                 define_modifier_response.set_error_result(error_result);
             }
             NiaDefineModifierCommandResult::Failure(failure_message) => {
                 let mut failure_result =
                     nia_protocol_rust::DefineModifierResponse_FailureResult::new();
 
-                failure_result
-                    .set_message(protobuf::Chars::from(failure_message));
+                failure_result.set_message(protobuf::Chars::from(
+                    failure_message.clone(),
+                ));
                 define_modifier_response.set_failure_result(failure_result);
             }
         }
 
         define_modifier_response
+    }
+
+    fn from_pb(
+        object_pb: DefineModifierResponse,
+    ) -> NiaServerResult<NiaDefineModifierResponse> {
+        unreachable!()
     }
 }

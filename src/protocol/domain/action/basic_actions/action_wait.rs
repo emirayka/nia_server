@@ -1,8 +1,8 @@
-use crate::error::{from_protobuf_error, NiaServerError};
+use crate::error::{from_protobuf_error, NiaServerError, NiaServerResult};
 use crate::protocol::Serializable;
 use protobuf::Message;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ActionWait {
     ms: i32,
 }
@@ -26,10 +26,12 @@ impl Serializable<ActionWait, nia_protocol_rust::ActionWait> for ActionWait {
         action_wait_pb
     }
 
-    fn from_pb(object_pb: nia_protocol_rust::ActionWait) -> ActionWait {
+    fn from_pb(
+        object_pb: nia_protocol_rust::ActionWait,
+    ) -> NiaServerResult<ActionWait> {
         let action_wait = ActionWait::new(object_pb.get_ms());
 
-        action_wait
+        Ok(action_wait)
     }
 }
 

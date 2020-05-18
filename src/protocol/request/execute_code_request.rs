@@ -1,11 +1,10 @@
-use std::convert::TryFrom;
+use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::error::NiaServerError;
-
-use crate::protocol::GetRequestType;
 use crate::protocol::RequestType;
+use crate::protocol::{GetRequestType, Serializable};
+use nia_protocol_rust::ExecuteCodeRequest;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NiaExecuteCodeRequest {
     code: String,
 }
@@ -23,14 +22,41 @@ impl NiaExecuteCodeRequest {
     }
 }
 
-impl TryFrom<nia_protocol_rust::ExecuteCodeRequest> for NiaExecuteCodeRequest {
-    type Error = NiaServerError;
+impl Serializable<NiaExecuteCodeRequest, nia_protocol_rust::ExecuteCodeRequest>
+    for NiaExecuteCodeRequest
+{
+    fn to_pb(&self) -> ExecuteCodeRequest {
+        let mut execute_code_request_pb =
+            nia_protocol_rust::ExecuteCodeRequest::new();
 
-    fn try_from(
-        execute_code_request: nia_protocol_rust::ExecuteCodeRequest,
-    ) -> Result<Self, Self::Error> {
-        let code = execute_code_request.get_code();
+        execute_code_request_pb
+            .set_code(protobuf::Chars::from(self.code.clone()));
 
-        Ok(NiaExecuteCodeRequest::new(code))
+        execute_code_request_pb
+    }
+
+    fn from_pb(
+        object_pb: ExecuteCodeRequest,
+    ) -> NiaServerResult<NiaExecuteCodeRequest> {
+        let mut execute_code_request =
+            NiaExecuteCodeRequest::new(object_pb.get_code());
+
+        Ok(execute_code_request)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn serializes_and_deserializes() {
+        let expected = NiaExecuteCodeRequest::new("(println \"kek\")");
+
+        let bytes = expected.to_bytes().unwrap();
+        let result = NiaExecuteCodeRequest::from_bytes(bytes).unwrap();
+
+        assert_eq!(expected, result);
     }
 }

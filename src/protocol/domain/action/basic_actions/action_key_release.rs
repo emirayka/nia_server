@@ -1,8 +1,8 @@
-use crate::error::{from_protobuf_error, NiaServerError};
+use crate::error::{from_protobuf_error, NiaServerError, NiaServerResult};
 use crate::protocol::Serializable;
 use protobuf::Message;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ActionKeyRelease {
     key_code: i32,
 }
@@ -31,11 +31,11 @@ impl Serializable<ActionKeyRelease, nia_protocol_rust::ActionKeyRelease>
 
     fn from_pb(
         object_pb: nia_protocol_rust::ActionKeyRelease,
-    ) -> ActionKeyRelease {
+    ) -> NiaServerResult<ActionKeyRelease> {
         let action_key_release =
             ActionKeyRelease::new(object_pb.get_key_code());
 
-        action_key_release
+        Ok(action_key_release)
     }
 }
 

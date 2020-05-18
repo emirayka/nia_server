@@ -1,43 +1,68 @@
-use std::convert::TryFrom;
+use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::error::NiaServerError;
-
-use crate::protocol::GetRequestType;
 use crate::protocol::RequestType;
+use crate::protocol::{GetRequestType, Serializable};
+use nia_protocol_rust::RemoveModifierRequest;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NiaRemoveModifierRequest {
-    keyboard_path: String,
+    device_id: i32,
     key_code: i32,
 }
 
 impl NiaRemoveModifierRequest {
-    pub fn new<S>(keyboard_path: S, key_code: i32) -> NiaRemoveModifierRequest
-    where
-        S: Into<String>,
-    {
+    pub fn new(device_id: i32, key_code: i32) -> NiaRemoveModifierRequest {
         NiaRemoveModifierRequest {
-            keyboard_path: keyboard_path.into(),
+            device_id,
             key_code,
         }
     }
 
-    pub fn get_path_and_key_code(self) -> (String, i32) {
-        (self.keyboard_path, self.key_code)
+    pub fn get_device_id_and_key_code(self) -> (i32, i32) {
+        (self.device_id, self.key_code)
     }
 }
 
-impl TryFrom<nia_protocol_rust::RemoveModifierRequest>
-    for NiaRemoveModifierRequest
+impl
+    Serializable<
+        NiaRemoveModifierRequest,
+        nia_protocol_rust::RemoveModifierRequest,
+    > for NiaRemoveModifierRequest
 {
-    type Error = NiaServerError;
+    fn to_pb(&self) -> nia_protocol_rust::RemoveModifierRequest {
+        let mut remove_modifier_request_pb =
+            nia_protocol_rust::RemoveModifierRequest::new();
 
-    fn try_from(
-        remove_modifier_request: nia_protocol_rust::RemoveModifierRequest,
-    ) -> Result<Self, Self::Error> {
-        let keyboard_path = remove_modifier_request.get_keyboard_path();
-        let key_code = remove_modifier_request.get_key_code();
+        remove_modifier_request_pb.set_device_id(self.device_id);
+        remove_modifier_request_pb.set_key_code(self.key_code);
 
-        Ok(NiaRemoveModifierRequest::new(keyboard_path, key_code))
+        remove_modifier_request_pb
+    }
+
+    fn from_pb(
+        object_pb: nia_protocol_rust::RemoveModifierRequest,
+    ) -> NiaServerResult<NiaRemoveModifierRequest> {
+        let remove_modifier_request = NiaRemoveModifierRequest::new(
+            object_pb.get_device_id(),
+            object_pb.get_key_code(),
+        );
+
+        Ok(remove_modifier_request)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn serializes_and_deserializes() {
+        let expected = NiaRemoveModifierRequest::new(0, 12);
+
+        let bytes = expected.to_bytes().unwrap();
+        let result = NiaRemoveModifierRequest::from_bytes(bytes).unwrap();
+
+        assert_eq!(expected, result);
     }
 }

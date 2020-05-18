@@ -1,5 +1,6 @@
-use crate::error::NiaServerError;
-use crate::protocol::NiaHandshakeRequest;
+use crate::error::{NiaServerError, NiaServerResult};
+use crate::protocol::{NiaHandshakeRequest, Serializable};
+use nia_protocol_rust::HandshakeResponse;
 
 const VERSION_MESSAGE: &'static str = "nia-server version '0.0.1'.";
 const INFO_MESSAGE: &'static str = "Have a good day :3";
@@ -21,10 +22,11 @@ impl NiaHandshakeResponse {
     }
 }
 
-impl From<NiaHandshakeResponse> for nia_protocol_rust::HandshakeResponse {
-    fn from(nia_handshake_response: NiaHandshakeResponse) -> Self {
-        let (version, info) =
-            (nia_handshake_response.version, nia_handshake_response.info);
+impl Serializable<NiaHandshakeResponse, nia_protocol_rust::HandshakeResponse>
+    for NiaHandshakeResponse
+{
+    fn to_pb(&self) -> HandshakeResponse {
+        let (version, info) = (self.version.clone(), self.info.clone());
 
         let mut handshake_response =
             nia_protocol_rust::HandshakeResponse::new();
@@ -38,5 +40,11 @@ impl From<NiaHandshakeResponse> for nia_protocol_rust::HandshakeResponse {
         handshake_response.set_success_result(success_result);
 
         handshake_response
+    }
+
+    fn from_pb(
+        object_pb: HandshakeResponse,
+    ) -> NiaServerResult<NiaHandshakeResponse> {
+        unreachable!()
     }
 }

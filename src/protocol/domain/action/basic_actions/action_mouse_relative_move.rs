@@ -1,8 +1,8 @@
-use crate::error::{from_protobuf_error, NiaServerError};
+use crate::error::{from_protobuf_error, NiaServerError, NiaServerResult};
 use crate::protocol::Serializable;
 use protobuf::Message;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ActionMouseRelativeMove {
     dx: i32,
     dy: i32,
@@ -18,7 +18,7 @@ impl ActionMouseRelativeMove {
     }
 
     pub fn get_dy(&self) -> i32 {
-        self.dx
+        self.dy
     }
 }
 
@@ -40,13 +40,13 @@ impl
 
     fn from_pb(
         object_pb: nia_protocol_rust::ActionMouseRelativeMove,
-    ) -> ActionMouseRelativeMove {
+    ) -> NiaServerResult<ActionMouseRelativeMove> {
         let action_mouse_absolute_move = ActionMouseRelativeMove::new(
             object_pb.get_dx(),
             object_pb.get_dy(),
         );
 
-        action_mouse_absolute_move
+        Ok(action_mouse_absolute_move)
     }
 }
 

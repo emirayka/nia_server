@@ -1,6 +1,5 @@
-use crate::error::NiaServerError;
-use crate::protocol::Modifier;
-use crate::protocol::NiaGetDefinedModifiersRequest;
+use crate::error::{NiaServerError, NiaServerResult};
+use crate::protocol::{NiaGetDefinedModifiersRequest, Serializable};
 use std::sync::MutexGuard;
 
 use nia_interpreter_core::NiaInterpreterCommand;
@@ -8,6 +7,7 @@ use nia_interpreter_core::NiaInterpreterCommandResult;
 use nia_interpreter_core::{
     EventLoopHandle, NiaGetDefinedModifiersCommandResult,
 };
+use nia_protocol_rust::GetDefinedModifiersResponse;
 
 #[derive(Debug, Clone)]
 pub struct NiaGetDefinedModifiersResponse {
@@ -76,13 +76,14 @@ impl NiaGetDefinedModifiersResponse {
     }
 }
 
-impl From<NiaGetDefinedModifiersResponse>
-    for nia_protocol_rust::GetDefinedModifiersResponse
+impl
+    Serializable<
+        NiaGetDefinedModifiersResponse,
+        nia_protocol_rust::GetDefinedModifiersResponse,
+    > for NiaGetDefinedModifiersResponse
 {
-    fn from(
-        nia_get_defined_modifiers_response: NiaGetDefinedModifiersResponse,
-    ) -> Self {
-        let command_result = nia_get_defined_modifiers_response.command_result;
+    fn to_pb(&self) -> GetDefinedModifiersResponse {
+        let command_result = &self.command_result;
 
         let mut get_defined_modifiers_response =
             nia_protocol_rust::GetDefinedModifiersResponse::new();
@@ -92,17 +93,21 @@ impl From<NiaGetDefinedModifiersResponse>
                 let mut modifiers = Vec::new();
 
                 for defined_modifier in defined_modifiers {
-                    let mut modifier = nia_protocol_rust::GetDefinedModifiersResponse_Modifier::new();
+                    let mut key2_pb = nia_protocol_rust::Key2::new();
+                    key2_pb.set_device_id(defined_modifier.0);
+                    key2_pb.set_key_code(defined_modifier.1);
 
-                    modifier.set_keyboard_path(protobuf::Chars::from(
-                        defined_modifier.0,
-                    ));
-                    modifier.set_key_code(defined_modifier.1);
-                    modifier.set_modifier_alias(protobuf::Chars::from(
-                        defined_modifier.2,
+                    let mut key_pb = nia_protocol_rust::Key::new();
+                    key_pb.set_key_2(key2_pb);
+
+                    let mut modifier_pb =
+                        nia_protocol_rust::ModifierDescription::new();
+                    modifier_pb.set_key(key_pb);
+                    modifier_pb.set_alias(protobuf::Chars::from(
+                        defined_modifier.2.clone(),
                     ));
 
-                    modifiers.push(modifier);
+                    modifiers.push(modifier_pb);
                 }
 
                 let modifiers = protobuf::RepeatedField::from(modifiers);
@@ -110,7 +115,7 @@ impl From<NiaGetDefinedModifiersResponse>
                 let mut success_result =
                     nia_protocol_rust::GetDefinedModifiersResponse_SuccessResult::new();
 
-                success_result.set_modifiers(modifiers);
+                success_result.set_modifier_descriptions(modifiers);
                 get_defined_modifiers_response
                     .set_success_result(success_result);
             }
@@ -118,20 +123,28 @@ impl From<NiaGetDefinedModifiersResponse>
                 let mut error_result =
                     nia_protocol_rust::GetDefinedModifiersResponse_ErrorResult::new();
 
-                error_result.set_message(protobuf::Chars::from(error_message));
+                error_result
+                    .set_message(protobuf::Chars::from(error_message.clone()));
                 get_defined_modifiers_response.set_error_result(error_result);
             }
             NiaGetDefinedModifiersCommandResult::Failure(failure_message) => {
                 let mut failure_result =
                     nia_protocol_rust::GetDefinedModifiersResponse_FailureResult::new();
 
-                failure_result
-                    .set_message(protobuf::Chars::from(failure_message));
+                failure_result.set_message(protobuf::Chars::from(
+                    failure_message.clone(),
+                ));
                 get_defined_modifiers_response
                     .set_failure_result(failure_result);
             }
         }
 
         get_defined_modifiers_response
+    }
+
+    fn from_pb(
+        object_pb: GetDefinedModifiersResponse,
+    ) -> NiaServerResult<NiaGetDefinedModifiersResponse> {
+        unreachable!()
     }
 }

@@ -1,8 +1,8 @@
-use crate::error::{from_protobuf_error, NiaServerError};
+use crate::error::{from_protobuf_error, NiaServerError, NiaServerResult};
 use crate::protocol::Serializable;
 use protobuf::Message;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ActionKeyPress {
     key_code: i32,
 }
@@ -28,10 +28,12 @@ impl Serializable<ActionKeyPress, nia_protocol_rust::ActionKeyPress>
         action_key_press_pb
     }
 
-    fn from_pb(object_pb: nia_protocol_rust::ActionKeyPress) -> ActionKeyPress {
+    fn from_pb(
+        object_pb: nia_protocol_rust::ActionKeyPress,
+    ) -> NiaServerResult<ActionKeyPress> {
         let action_key_press = ActionKeyPress::new(object_pb.get_key_code());
 
-        action_key_press
+        Ok(action_key_press)
     }
 }
 
