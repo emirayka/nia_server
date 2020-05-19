@@ -100,6 +100,19 @@ impl Server {
         let mut server = self;
         let mut interpreter = Interpreter::new();
 
+        nia_interpreter_core::library::define_action_execute_code(
+            &mut interpreter,
+            "test2",
+            "code2",
+        )
+        .unwrap();
+        nia_interpreter_core::library::define_action_execute_code(
+            &mut interpreter,
+            "test",
+            "code",
+        )
+        .unwrap();
+
         let event_loop_handle = EventLoop::run_event_loop(interpreter);
         let event_loop_handle = Arc::new(Mutex::new(event_loop_handle));
         let server_handle = Arc::new(Mutex::new(server));

@@ -31,7 +31,7 @@ impl NiaAction {
         &self.action_name
     }
 
-    fn from_interpreter_action(
+    pub fn from_interpreter_action(
         action_name: String,
         action: nia_interpreter_core::Action,
     ) -> NiaAction {
