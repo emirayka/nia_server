@@ -1,7 +1,7 @@
-use crate::error::{NiaServerError, NiaServerResult};
+use crate::error::NiaServerError;
+use crate::error::NiaServerResult;
 
-use crate::protocol::RequestType;
-use crate::protocol::{GetRequestType, Serializable};
+use crate::protocol::Serializable;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NiaDefineDeviceRequest {

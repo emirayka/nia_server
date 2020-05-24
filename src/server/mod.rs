@@ -112,6 +112,22 @@ impl Server {
             "code",
         )
         .unwrap();
+        nia_interpreter_core::library::define_global_mapping(
+            &mut interpreter,
+            &nia_interpreter_core::Mapping::new(
+                vec![nia_interpreter_core::KeyChord::new(
+                    vec![
+                        nia_interpreter_core::Key::new_device_key(1, 16),
+                        nia_interpreter_core::Key::new_device_key(1, 17),
+                    ],
+                    nia_interpreter_core::Key::new_device_key(1, 18),
+                )],
+                nia_interpreter_core::Action::ExecuteOSCommand(String::from(
+                    "kek",
+                )),
+            ),
+        )
+        .unwrap();
 
         let event_loop_handle = EventLoop::run_event_loop(interpreter);
         let event_loop_handle = Arc::new(Mutex::new(event_loop_handle));

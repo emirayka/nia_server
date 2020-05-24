@@ -9,8 +9,10 @@ use nia_protocol_rust::GetDefinedActionsResponse;
 
 use crate::error::NiaServerError;
 use crate::error::NiaServerResult;
-use crate::protocol::Serializable;
-use crate::protocol::{ActionEnum, NiaAction, NiaGetDefinedActionsRequest};
+use crate::protocol::{
+    NiaAction, NiaActionEnum, NiaGetDefinedActionsRequest, NiaNamedAction,
+};
+use crate::protocol::{NiaConvertable, Serializable};
 
 #[derive(Debug, Clone)]
 pub struct NiaGetDefinedActionsResponse {
@@ -23,19 +25,19 @@ impl NiaGetDefinedActionsResponse {
         event_loop_handle: MutexGuard<EventLoopHandle>,
     ) -> Result<NiaGetDefinedActionsResponse, NiaServerError> {
         let interpreter_command =
-            NiaInterpreterCommand::make_get_defined_actions();
+            NiaInterpreterCommand::make_get_defined_actions_command();
 
         event_loop_handle
             .send_command(interpreter_command)
             .map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error sending command to the interpreter.",
                 )
             })?;
 
         let execution_result =
             event_loop_handle.receive_result().map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error reading command from the interpreter.",
                 )
             })?;
@@ -45,7 +47,7 @@ impl NiaGetDefinedActionsResponse {
                 NiaGetDefinedActionsResponse { command_result }
             }
             _ => {
-                return NiaServerError::interpreter_execution(
+                return NiaServerError::interpreter_error(
                     "Unexpected command result.",
                 )
                 .into();
@@ -94,21 +96,40 @@ impl
             NiaGetDefinedActionsCommandResult::Success(defined_actions) => {
                 let mut actions = defined_actions
                     .iter()
-                    .map(|(name, interpreter_action)| {
-                        NiaAction::from_interpreter_action(
-                            name.clone(),
-                            interpreter_action.clone(),
+                    .map(|interpreter_action| {
+                        NiaNamedAction::from_interpreter_repr(
+                            interpreter_action,
                         )
-                        .to_pb()
                     })
-                    .collect();
+                    .map(|action_result| {
+                        action_result.map(|action| action.to_pb())
+                    })
+                    .collect::<NiaServerResult<Vec<nia_protocol_rust::NamedAction>>>();
 
-                let repeated = protobuf::RepeatedField::from_vec(actions);
+                match actions {
+                    Ok(actions) => {
+                        let repeated =
+                            protobuf::RepeatedField::from_vec(actions);
 
-                let mut success_result = nia_protocol_rust::GetDefinedActionsResponse_SuccessResult::new();
-                success_result.set_actions(repeated);
+                        let mut success_result = nia_protocol_rust::GetDefinedActionsResponse_SuccessResult::new();
+                        success_result.set_named_actions(repeated);
 
-                get_defined_actions_response.set_success_result(success_result);
+                        get_defined_actions_response
+                            .set_success_result(success_result);
+                    }
+                    Err(error) => {
+                        let message = error.get_message();
+
+                        let mut error_result =
+                            nia_protocol_rust::GetDefinedActionsResponse_ErrorResult::new();
+
+                        error_result.set_message(protobuf::Chars::from(
+                            message.clone(),
+                        ));
+                        get_defined_actions_response
+                            .set_error_result(error_result);
+                    }
+                }
             }
             NiaGetDefinedActionsCommandResult::Error(error_message) => {
                 let mut error_result =

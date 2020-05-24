@@ -1,22 +1,25 @@
 use crate::error::NiaServerError;
 use crate::error::NiaServerResult;
 
-use crate::protocol::GetRequestType;
 use crate::protocol::NiaAction;
-use crate::protocol::RequestType;
+use crate::protocol::NiaNamedAction;
 use crate::protocol::Serializable;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NiaDefineActionRequest {
-    action: NiaAction,
+    action: NiaNamedAction,
 }
 
 impl NiaDefineActionRequest {
-    pub fn new(action: NiaAction) -> NiaDefineActionRequest {
+    pub fn new(action: NiaNamedAction) -> NiaDefineActionRequest {
         NiaDefineActionRequest { action }
     }
 
-    pub fn get_action(self) -> NiaAction {
+    pub fn get_action(&self) -> &NiaNamedAction {
+        &self.action
+    }
+
+    pub fn take_action(self) -> NiaNamedAction {
         self.action
     }
 }
@@ -26,13 +29,13 @@ impl
     for NiaDefineActionRequest
 {
     fn to_pb(&self) -> nia_protocol_rust::DefineActionRequest {
-        let mut define_device_request_pb =
+        let mut define_action_request_pb =
             nia_protocol_rust::DefineActionRequest::new();
 
         let action_pb = self.action.to_pb();
-        define_device_request_pb.set_action(action_pb);
+        define_action_request_pb.set_action(action_pb);
 
-        define_device_request_pb
+        define_action_request_pb
     }
 
     fn from_pb(
@@ -40,7 +43,7 @@ impl
     ) -> NiaServerResult<NiaDefineActionRequest> {
         let mut object_pb = object_pb;
 
-        let action = NiaAction::from_pb(object_pb.take_action())?;
+        let action = NiaNamedAction::from_pb(object_pb.take_action())?;
 
         Ok(NiaDefineActionRequest::new(action))
     }
@@ -54,9 +57,9 @@ mod tests {
 
     #[test]
     fn serializes_and_deserializes() {
-        let expected = NiaDefineActionRequest::new(NiaAction::new(
-            "test",
-            ActionExecuteOSCommand::new("kek").into(),
+        let expected = NiaDefineActionRequest::new(NiaNamedAction::new(
+            NiaAction::new(ActionExecuteOSCommand::new("kek").into()),
+            "execute kek",
         ));
 
         let bytes = expected.to_bytes().unwrap();

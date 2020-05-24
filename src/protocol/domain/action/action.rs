@@ -1,110 +1,172 @@
 use crate::error::NiaServerError;
 use crate::error::NiaServerResult;
 
-use crate::protocol::ActionEnum;
 use crate::protocol::Serializable;
+use crate::protocol::{NiaActionEnum, NiaConvertable};
 
 use crate::protocol::domain::action::basic_actions::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NiaAction {
-    action: ActionEnum,
-    action_name: String,
+    action: NiaActionEnum,
 }
 
 impl NiaAction {
-    pub fn new<S>(action_name: S, action: ActionEnum) -> NiaAction
-    where
-        S: Into<String>,
-    {
-        NiaAction {
-            action_name: action_name.into(),
-            action,
-        }
+    pub fn new(action: NiaActionEnum) -> NiaAction {
+        NiaAction { action }
     }
 
-    pub fn get_action(&self) -> &ActionEnum {
+    pub fn get_action(&self) -> &NiaActionEnum {
         &self.action
     }
+}
 
-    pub fn get_action_name(&self) -> &str {
-        &self.action_name
+impl From<NiaActionEnum> for NiaAction {
+    fn from(action: NiaActionEnum) -> Self {
+        NiaAction::new(action)
+    }
+}
+
+impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
+    fn to_interpreter_repr(&self) -> nia_interpreter_core::Action {
+        let action = match &self.action {
+            NiaActionEnum::KeyClick(action_key_click) => {
+                nia_interpreter_core::Action::KeyClick(
+                    action_key_click.get_key_code(),
+                )
+            }
+            NiaActionEnum::KeyPress(action_key_press) => {
+                nia_interpreter_core::Action::KeyPress(
+                    action_key_press.get_key_code(),
+                )
+            }
+            NiaActionEnum::KeyRelease(action_key_release) => {
+                nia_interpreter_core::Action::KeyRelease(
+                    action_key_release.get_key_code(),
+                )
+            }
+            NiaActionEnum::MouseButtonClick(action_mouse_button_click) => {
+                nia_interpreter_core::Action::MouseButtonClick(
+                    action_mouse_button_click.get_button_code(),
+                )
+            }
+            NiaActionEnum::MouseButtonPress(action_mouse_button_press) => {
+                nia_interpreter_core::Action::MouseButtonPress(
+                    action_mouse_button_press.get_button_code(),
+                )
+            }
+            NiaActionEnum::MouseButtonRelease(action_mouse_button_release) => {
+                nia_interpreter_core::Action::MouseButtonRelease(
+                    action_mouse_button_release.get_button_code(),
+                )
+            }
+            NiaActionEnum::MouseAbsoluteMove(action_mouse_absolute_move) => {
+                nia_interpreter_core::Action::MouseAbsoluteMove(
+                    action_mouse_absolute_move.get_x(),
+                    action_mouse_absolute_move.get_y(),
+                )
+            }
+            NiaActionEnum::MouseRelativeMove(action_mouse_relative_move) => {
+                nia_interpreter_core::Action::MouseRelativeMove(
+                    action_mouse_relative_move.get_dx(),
+                    action_mouse_relative_move.get_dy(),
+                )
+            }
+            NiaActionEnum::ExecuteCode(action_execute_code) => {
+                nia_interpreter_core::Action::ExecuteCode(String::from(
+                    action_execute_code.get_code(),
+                ))
+            }
+            NiaActionEnum::ExecuteFunction(action_execute_function) => {
+                nia_interpreter_core::Action::ExecuteFunction(String::from(
+                    action_execute_function.get_function_name(),
+                ))
+            }
+            NiaActionEnum::ExecuteOSCommand(action_execute_os_command) => {
+                nia_interpreter_core::Action::ExecuteOSCommand(String::from(
+                    action_execute_os_command.get_os_command(),
+                ))
+            }
+            NiaActionEnum::TextType(action_text_type) => {
+                nia_interpreter_core::Action::TextType(String::from(
+                    action_text_type.get_text(),
+                ))
+            }
+            NiaActionEnum::Wait(action_wait) => {
+                nia_interpreter_core::Action::Wait(action_wait.get_ms())
+            }
+        };
+
+        action
     }
 
-    pub fn from_interpreter_action(
-        action_name: String,
-        action: nia_interpreter_core::Action,
-    ) -> NiaAction {
-        match action {
+    fn from_interpreter_repr(
+        interpreter_action: &nia_interpreter_core::Action,
+    ) -> NiaServerResult<NiaAction> {
+        let action = match interpreter_action {
             nia_interpreter_core::Action::KeyPress(key_code) => NiaAction {
-                action: ActionKeyPress::new(key_code).into(),
-                action_name,
+                action: ActionKeyPress::new(*key_code).into(),
             },
             nia_interpreter_core::Action::KeyClick(key_code) => NiaAction {
-                action: ActionKeyClick::new(key_code).into(),
-                action_name,
+                action: ActionKeyClick::new(*key_code).into(),
             },
             nia_interpreter_core::Action::KeyRelease(key_code) => NiaAction {
-                action: ActionKeyRelease::new(key_code).into(),
-                action_name,
+                action: ActionKeyRelease::new(*key_code).into(),
             },
             nia_interpreter_core::Action::MouseButtonPress(button_code) => {
                 NiaAction {
-                    action: ActionMouseButtonPress::new(button_code).into(),
-                    action_name,
+                    action: ActionMouseButtonPress::new(*button_code).into(),
                 }
             }
             nia_interpreter_core::Action::MouseButtonClick(button_code) => {
                 NiaAction {
-                    action: ActionMouseButtonClick::new(button_code).into(),
-                    action_name,
+                    action: ActionMouseButtonClick::new(*button_code).into(),
                 }
             }
             nia_interpreter_core::Action::MouseButtonRelease(button_code) => {
                 NiaAction {
-                    action: ActionMouseButtonRelease::new(button_code).into(),
-                    action_name,
+                    action: ActionMouseButtonRelease::new(*button_code).into(),
                 }
             }
             nia_interpreter_core::Action::MouseAbsoluteMove(x, y) => {
                 NiaAction {
-                    action: ActionMouseAbsoluteMove::new(x, y).into(),
-                    action_name,
+                    action: ActionMouseAbsoluteMove::new(*x, *y).into(),
                 }
             }
             nia_interpreter_core::Action::MouseRelativeMove(dx, dy) => {
                 NiaAction {
-                    action: ActionMouseRelativeMove::new(dx, dy).into(),
-                    action_name,
+                    action: ActionMouseRelativeMove::new(*dx, *dy).into(),
                 }
             }
             nia_interpreter_core::Action::TextType(text_to_type) => NiaAction {
                 action: ActionTextType::new(text_to_type).into(),
-                action_name,
             },
             nia_interpreter_core::Action::Wait(ms) => NiaAction {
-                action: ActionWait::new(ms).into(),
-                action_name,
+                action: ActionWait::new(*ms).into(),
             },
             nia_interpreter_core::Action::ExecuteCode(code_to_execute) => {
                 NiaAction {
                     action: ActionExecuteCode::new(code_to_execute).into(),
-                    action_name,
                 }
             }
             nia_interpreter_core::Action::ExecuteFunction(function_name) => {
                 NiaAction {
                     action: ActionExecuteFunction::new(function_name).into(),
-                    action_name,
                 }
             }
             nia_interpreter_core::Action::ExecuteOSCommand(os_command) => {
                 NiaAction {
                     action: ActionExecuteOSCommand::new(os_command).into(),
-                    action_name,
                 }
             }
-        }
+            nia_interpreter_core::Action::ExecuteFunctionValue(function_value) => {
+                return NiaServerError::interpreter_error(
+                    "It must not be possible to serialized execute function value action directly."
+                ).into()
+            }
+        };
+
+        Ok(action)
     }
 }
 
@@ -113,37 +175,37 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
         let mut action_pb = nia_protocol_rust::Action::new();
 
         match &self.action {
-            ActionEnum::KeyClick(action_key_click) => {
+            NiaActionEnum::KeyClick(action_key_click) => {
                 let action_key_click_pb = action_key_click.to_pb();
 
                 action_pb.set_action_key_click(action_key_click_pb)
             }
-            ActionEnum::KeyPress(action_key_press) => {
+            NiaActionEnum::KeyPress(action_key_press) => {
                 let action_key_press_pb = action_key_press.to_pb();
 
                 action_pb.set_action_key_press(action_key_press_pb)
             }
-            ActionEnum::KeyRelease(action_key_release) => {
+            NiaActionEnum::KeyRelease(action_key_release) => {
                 let action_key_release_pb = action_key_release.to_pb();
 
                 action_pb.set_action_key_release(action_key_release_pb)
             }
 
-            ActionEnum::MouseButtonClick(action_mouse_button_click) => {
+            NiaActionEnum::MouseButtonClick(action_mouse_button_click) => {
                 let action_mouse_button_click_pb =
                     action_mouse_button_click.to_pb();
 
                 action_pb
                     .set_action_mouse_button_click(action_mouse_button_click_pb)
             }
-            ActionEnum::MouseButtonPress(action_mouse_button_press) => {
+            NiaActionEnum::MouseButtonPress(action_mouse_button_press) => {
                 let action_mouse_button_press_pb =
                     action_mouse_button_press.to_pb();
 
                 action_pb
                     .set_action_mouse_button_press(action_mouse_button_press_pb)
             }
-            ActionEnum::MouseButtonRelease(action_mouse_button_release) => {
+            NiaActionEnum::MouseButtonRelease(action_mouse_button_release) => {
                 let action_mouse_button_release_pb =
                     action_mouse_button_release.to_pb();
 
@@ -152,7 +214,7 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
                 )
             }
 
-            ActionEnum::MouseAbsoluteMove(action_mouse_absolute_move) => {
+            NiaActionEnum::MouseAbsoluteMove(action_mouse_absolute_move) => {
                 let action_mouse_absolute_move_pb =
                     action_mouse_absolute_move.to_pb();
 
@@ -160,7 +222,7 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
                     action_mouse_absolute_move_pb,
                 )
             }
-            ActionEnum::MouseRelativeMove(action_mouse_relative_move) => {
+            NiaActionEnum::MouseRelativeMove(action_mouse_relative_move) => {
                 let action_mouse_relative_move_pb =
                     action_mouse_relative_move.to_pb();
 
@@ -169,39 +231,36 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
                 )
             }
 
-            ActionEnum::ExecuteCode(action_execute_code) => {
+            NiaActionEnum::ExecuteCode(action_execute_code) => {
                 let action_execute_code_pb = action_execute_code.to_pb();
 
                 action_pb.set_action_execute_code(action_execute_code_pb)
             }
-            ActionEnum::ExecuteFunction(action_execute_function) => {
+            NiaActionEnum::ExecuteFunction(action_execute_function) => {
                 let action_execute_function_pb =
                     action_execute_function.to_pb();
 
                 action_pb
                     .set_action_execute_function(action_execute_function_pb)
             }
-            ActionEnum::ExecuteOSCommand(action_execute_os_command) => {
+            NiaActionEnum::ExecuteOSCommand(action_execute_os_command) => {
                 let action_execute_os_command_pb =
                     action_execute_os_command.to_pb();
 
                 action_pb
                     .set_action_execute_os_command(action_execute_os_command_pb)
             }
-            ActionEnum::TextType(action_text_type) => {
+            NiaActionEnum::TextType(action_text_type) => {
                 let action_text_type_pb = action_text_type.to_pb();
 
                 action_pb.set_action_text_type(action_text_type_pb)
             }
-            ActionEnum::Wait(action_wait) => {
+            NiaActionEnum::Wait(action_wait) => {
                 let action_wait_pb = action_wait.to_pb();
 
                 action_pb.set_action_wait(action_wait_pb)
             }
         }
-
-        action_pb
-            .set_action_name(protobuf::Chars::from(self.action_name.clone()));
 
         action_pb
     }
@@ -284,7 +343,6 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
         };
 
         let action = NiaAction {
-            action_name: object_pb.take_action_name().to_string(),
             action: action_enum,
         };
 
@@ -297,211 +355,339 @@ mod tests {
     #[allow(unused_imports)]
     use super::*;
 
-    #[test]
-    fn serializes_and_deserializes_action_key_click() {
-        let action_name = String::from("key-click");
-        let action = ActionKeyClick::new(1).into();
+    #[cfg(test)]
+    mod serialization {
+        #[allow(unused_imports)]
+        use super::*;
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_key_click() {
+            let action = ActionKeyClick::new(1).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_key_press() {
+            let action = ActionKeyPress::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_key_release() {
+            let action = ActionKeyRelease::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let mut actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_mouse_button_click() {
+            let action = ActionMouseButtonClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_mouse_button_press() {
+            let action = ActionMouseButtonPress::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_mouse_button_release() {
+            let action = ActionMouseButtonRelease::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_mouse_absolute_move() {
+            let action = ActionMouseAbsoluteMove::new(100, 100).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_mouse_relative_move() {
+            let action = ActionMouseRelativeMove::new(100, 100).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_execute_code() {
+            let action = ActionExecuteCode::new("(+ 1 2)").into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_execute_function() {
+            let action = ActionExecuteFunction::new("function").into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_execute_os_command() {
+            let action = ActionExecuteOSCommand::new("ls").into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_text_type() {
+            let action = ActionTextType::new("arst").into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_wait() {
+            let action = ActionWait::new(1000).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
     }
 
-    #[test]
-    fn serializes_and_deserializes_action_key_press() {
-        let action_name = String::from("key-press");
-        let action = ActionKeyPress::new(1).into();
+    #[cfg(test)]
+    mod convertable {
+        #[allow(unused_imports)]
+        use super::*;
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_key_click() {
+            let action = ActionKeyClick::new(1).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_key_release() {
-        let action_name = String::from("key-release");
-        let action = ActionKeyRelease::new(1).into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_key_press() {
+            let action = ActionKeyPress::new(1).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let mut actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_mouse_button_click() {
-        let action_name = String::from("mouse-button-click");
-        let action = ActionMouseButtonClick::new(1).into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_key_release() {
+            let action = ActionKeyRelease::new(1).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let bytes = expected.to_interpreter_repr();
+            let mut actual = NiaAction::from_interpreter_repr(&bytes).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_mouse_button_press() {
-        let action_name = String::from("mouse-button-press");
-        let action = ActionMouseButtonPress::new(1).into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_mouse_button_click() {
+            let action = ActionMouseButtonClick::new(1).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_mouse_button_release() {
-        let action_name = String::from("mouse-button-release");
-        let action = ActionMouseButtonRelease::new(1).into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_mouse_button_press() {
+            let action = ActionMouseButtonPress::new(1).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_mouse_absolute_move() {
-        let action_name = String::from("mouse-absolute-move");
-        let action = ActionMouseAbsoluteMove::new(100, 100).into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_mouse_button_release() {
+            let action = ActionMouseButtonRelease::new(1).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_mouse_relative_move() {
-        let action_name = String::from("mouse-relative-move");
-        let action = ActionMouseRelativeMove::new(100, 100).into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_mouse_absolute_move() {
+            let action = ActionMouseAbsoluteMove::new(100, 100).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_execute_code() {
-        let action_name = String::from("execute-code");
-        let action = ActionExecuteCode::new("(+ 1 2)").into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_mouse_relative_move() {
+            let action = ActionMouseRelativeMove::new(100, 100).into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_execute_function() {
-        let action_name = String::from("execute-function");
-        let action = ActionExecuteFunction::new("function").into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_execute_code() {
+            let action = ActionExecuteCode::new("(+ 1 2)").into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_execute_os_command() {
-        let action_name = String::from("execute-os-command");
-        let action = ActionExecuteOSCommand::new("ls").into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_execute_function() {
+            let action = ActionExecuteFunction::new("function").into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_text_type() {
-        let action_name = String::from("text-type");
-        let action = ActionTextType::new("arst").into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_execute_os_command() {
+            let action = ActionExecuteOSCommand::new("ls").into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
-    }
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
 
-    #[test]
-    fn serializes_and_deserializes_action_wait() {
-        let action_name = String::from("wait");
-        let action = ActionWait::new(1000).into();
+            assert_eq!(expected, actual);
+        }
 
-        let expected = NiaAction {
-            action_name,
-            action,
-        };
+        #[test]
+        fn serializes_and_deserializes_action_text_type() {
+            let action = ActionTextType::new("arst").into();
 
-        let bytes = expected.to_bytes().unwrap();
-        let actual = NiaAction::from_bytes(bytes).unwrap();
+            let expected = NiaAction { action };
 
-        assert_eq!(expected, actual);
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_wait() {
+            let action = ActionWait::new(1000).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
     }
 }

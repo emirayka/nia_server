@@ -17,7 +17,7 @@ impl ActionExecuteFunction {
         }
     }
 
-    pub fn get_function_name(&self) -> &str {
+    pub fn get_function_name(&self) -> &String {
         &self.function_name
     }
 }

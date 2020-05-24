@@ -15,7 +15,7 @@ impl ActionExecuteCode {
         ActionExecuteCode { code: code.into() }
     }
 
-    pub fn get_code(&self) -> &str {
+    pub fn get_code(&self) -> &String {
         &self.code
     }
 }

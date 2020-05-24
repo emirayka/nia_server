@@ -7,9 +7,9 @@ use nia_interpreter_core::{EventLoopHandle, NiaDefineActionCommandResult};
 
 use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::protocol::NiaAction;
 use crate::protocol::Serializable;
-use crate::protocol::{ActionEnum, NiaDefineActionRequest};
+use crate::protocol::{NiaAction, NiaNamedAction};
+use crate::protocol::{NiaActionEnum, NiaDefineActionRequest};
 use nia_protocol_rust::DefineActionResponse;
 
 #[derive(Debug, Clone)]
@@ -17,83 +17,83 @@ pub struct NiaDefineActionResponse {
     command_result: NiaDefineActionCommandResult,
 }
 
-fn make_define_action_command(action: NiaAction) -> NiaInterpreterCommand {
-    match action.get_action() {
-        ActionEnum::KeyPress(action_key_press) => {
+fn make_define_action_command(action: NiaNamedAction) -> NiaInterpreterCommand {
+    match action.get_action().get_action() {
+        NiaActionEnum::KeyPress(action_key_press) => {
             NiaInterpreterCommand::make_define_key_press_action_command(
                 action.get_action_name(),
                 action_key_press.get_key_code()
             )
         }
-        ActionEnum::KeyClick(action_key_click) => {
+        NiaActionEnum::KeyClick(action_key_click) => {
             NiaInterpreterCommand::make_define_key_click_action_command(
                 action.get_action_name(),
                 action_key_click.get_key_code()
             )
         }
-        ActionEnum::KeyRelease(action_key_release) => {
+        NiaActionEnum::KeyRelease(action_key_release) => {
             NiaInterpreterCommand::make_define_key_release_action_command(
                 action.get_action_name(),
                 action_key_release.get_key_code()
             )
         }
-        ActionEnum::MouseButtonClick(action_mouse_button_click) => {
+        NiaActionEnum::MouseButtonClick(action_mouse_button_click) => {
             NiaInterpreterCommand::make_define_mouse_button_click_action_command(
                 action.get_action_name(),
                 action_mouse_button_click.get_button_code()
             )
         }
-        ActionEnum::MouseButtonPress(action_mouse_button_press) => {
+        NiaActionEnum::MouseButtonPress(action_mouse_button_press) => {
             NiaInterpreterCommand::make_define_mouse_button_press_action_command(
                 action.get_action_name(),
                 action_mouse_button_press.get_button_code()
             )
         }
-        ActionEnum::MouseButtonRelease(action_mouse_button_release) => {
+        NiaActionEnum::MouseButtonRelease(action_mouse_button_release) => {
             NiaInterpreterCommand::make_define_mouse_button_release_action_command(
                 action.get_action_name(),
                 action_mouse_button_release.get_button_code()
             )
         }
-        ActionEnum::MouseAbsoluteMove(action_mouse_absolute_move) => {
+        NiaActionEnum::MouseAbsoluteMove(action_mouse_absolute_move) => {
             NiaInterpreterCommand::make_define_mouse_absolute_move_action_command(
                 action.get_action_name(),
                 action_mouse_absolute_move.get_x(),
                 action_mouse_absolute_move.get_y(),
             )
         }
-        ActionEnum::MouseRelativeMove(action_mouse_relative_move) => {
+        NiaActionEnum::MouseRelativeMove(action_mouse_relative_move) => {
             NiaInterpreterCommand::make_define_mouse_relative_move_action_command(
                 action.get_action_name(),
                 action_mouse_relative_move.get_dx(),
                 action_mouse_relative_move.get_dy(),
             )
         }
-        ActionEnum::ExecuteCode(action_execute_code) => {
+        NiaActionEnum::ExecuteCode(action_execute_code) => {
             NiaInterpreterCommand::make_define_execute_code_action_command(
                 action.get_action_name(),
                 action_execute_code.get_code(),
             )
         }
-        ActionEnum::ExecuteFunction(action_execute_function) => {
+        NiaActionEnum::ExecuteFunction(action_execute_function) => {
             NiaInterpreterCommand::make_define_execute_code_action_command(
                 action.get_action_name(),
                 action_execute_function.get_function_name(),
             )
         }
-        ActionEnum::ExecuteOSCommand(action_execute_os_command) => {
+        NiaActionEnum::ExecuteOSCommand(action_execute_os_command) => {
             NiaInterpreterCommand::make_define_execute_os_command_action_command(
                 action.get_action_name(),
                 action_execute_os_command.get_os_command(),
             )
         }
-        ActionEnum::TextType(action_text_type) => {
+        NiaActionEnum::TextType(action_text_type) => {
             NiaInterpreterCommand::make_define_text_type_action_command(
                 action.get_action_name(),
                 action_text_type.get_text(),
             )
         }
-        ActionEnum::Wait(action_wait) => {
+        NiaActionEnum::Wait(action_wait) => {
             NiaInterpreterCommand::make_define_wait_action_command(
                 action.get_action_name(),
                 action_wait.get_ms(),
@@ -107,21 +107,21 @@ impl NiaDefineActionResponse {
         nia_define_action_request: NiaDefineActionRequest,
         event_loop_handle: MutexGuard<EventLoopHandle>,
     ) -> Result<NiaDefineActionResponse, NiaServerError> {
-        let action = nia_define_action_request.get_action();
+        let action = nia_define_action_request.take_action();
 
         let interpreter_command = make_define_action_command(action);
 
         event_loop_handle
             .send_command(interpreter_command)
             .map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error sending command to the interpreter.",
                 )
             })?;
 
         let execution_result =
             event_loop_handle.receive_result().map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error reading command from the interpreter.",
                 )
             })?;
@@ -131,7 +131,7 @@ impl NiaDefineActionResponse {
                 NiaDefineActionResponse { command_result }
             }
             _ => {
-                return NiaServerError::interpreter_execution(
+                return NiaServerError::interpreter_error(
                     "Unexpected command result.",
                 )
                 .into()

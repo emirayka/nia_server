@@ -7,7 +7,7 @@ use nia_interpreter_core::{EventLoopHandle, NiaDefineModifierCommandResult};
 
 use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::protocol::{NiaDefineModifierRequest, Serializable};
+use crate::protocol::{NiaConvertable, NiaDefineModifierRequest, Serializable};
 use nia_protocol_rust::DefineModifierResponse;
 
 #[derive(Debug, Clone)]
@@ -20,27 +20,25 @@ impl NiaDefineModifierResponse {
         nia_define_modifier_request: NiaDefineModifierRequest,
         event_loop_handle: MutexGuard<EventLoopHandle>,
     ) -> Result<NiaDefineModifierResponse, NiaServerError> {
-        let (device_id, key_code, modifier_alias) =
-            nia_define_modifier_request.into_tuple();
+        let modifier = nia_define_modifier_request.take_modifier();
+        let interpreter_modifier = modifier.to_interpreter_repr();
 
         let interpreter_command =
             NiaInterpreterCommand::make_define_modifier_command(
-                device_id,
-                key_code,
-                modifier_alias,
+                interpreter_modifier,
             );
 
         event_loop_handle
             .send_command(interpreter_command)
             .map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error sending command to the interpreter.",
                 )
             })?;
 
         let execution_result =
             event_loop_handle.receive_result().map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error reading command from the interpreter.",
                 )
             })?;
@@ -50,7 +48,7 @@ impl NiaDefineModifierResponse {
                 NiaDefineModifierResponse { command_result }
             }
             _ => {
-                return NiaServerError::interpreter_execution(
+                return NiaServerError::interpreter_error(
                     "Unexpected command result.",
                 )
                 .into()

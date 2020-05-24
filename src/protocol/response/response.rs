@@ -1,25 +1,30 @@
 use std::sync::MutexGuard;
 
-use nia_interpreter_core::EventLoopHandle;
+use nia_interpreter_core::{EventLoopHandle, NiaStopListeningCommand};
+use nia_protocol_rust::Response;
 
-use crate::error::{NiaServerError, NiaServerResult};
+use crate::error::NiaServerError;
+use crate::error::NiaServerResult;
 
+use crate::protocol::NiaExecuteCodeResponse;
+use crate::protocol::NiaGetDefinedActionsResponse;
+use crate::protocol::NiaGetDefinedMappingsRequest;
+use crate::protocol::NiaGetDefinedMappingsResponse;
+use crate::protocol::NiaGetDefinedModifiersResponse;
+use crate::protocol::NiaGetDevicesResponse;
 use crate::protocol::NiaHandshakeResponse;
+use crate::protocol::NiaRemoveActionResponse;
 use crate::protocol::NiaRemoveDeviceByNameResponse;
 use crate::protocol::NiaRemoveDeviceByPathResponse;
+use crate::protocol::NiaRemoveMappingResponse;
 use crate::protocol::NiaRemoveModifierResponse;
 use crate::protocol::NiaRequest;
-use crate::protocol::{
-    NiaDefineActionResponse, NiaExecuteCodeResponse,
-    NiaGetDefinedActionsResponse,
-};
-use crate::protocol::{
-    NiaDefineDeviceResponse, NiaGetDefinedModifiersResponse,
-};
-use crate::protocol::{NiaDefineModifierResponse, Serializable};
-use crate::protocol::{NiaGetDevicesResponse, NiaRemoveActionResponse};
+use crate::protocol::Serializable;
+use crate::protocol::{NiaChangeMappingResponse, NiaDefineActionResponse};
+use crate::protocol::{NiaDefineDeviceResponse, NiaStartListeningResponse};
+use crate::protocol::{NiaDefineMappingResponse, NiaStopListeningResponse};
+use crate::protocol::{NiaDefineModifierResponse, NiaIsListeningResponse};
 use crate::server::Server;
-use nia_protocol_rust::Response;
 
 #[derive(Debug, Clone)]
 pub enum NiaResponse {
@@ -35,6 +40,13 @@ pub enum NiaResponse {
     GetDefinedActions(NiaGetDefinedActionsResponse),
     DefineAction(NiaDefineActionResponse),
     RemoveAction(NiaRemoveActionResponse),
+    GetDefinedMappings(NiaGetDefinedMappingsResponse),
+    DefineMapping(NiaDefineMappingResponse),
+    ChangeMapping(NiaChangeMappingResponse),
+    RemoveMapping(NiaRemoveMappingResponse),
+    IsListening(NiaIsListeningResponse),
+    StartListening(NiaStartListeningResponse),
+    StopListening(NiaStopListeningResponse),
 }
 
 impl NiaResponse {
@@ -160,6 +172,68 @@ impl NiaResponse {
 
                 NiaResponse::RemoveAction(nia_remove_action_response)
             }
+            NiaRequest::GetDefinedMappings(
+                nia_get_defined_mappings_request,
+            ) => {
+                let nia_get_defined_mappings_response =
+                    NiaGetDefinedMappingsResponse::from(
+                        nia_get_defined_mappings_request,
+                        event_loop_handle,
+                    );
+
+                NiaResponse::GetDefinedMappings(
+                    nia_get_defined_mappings_response,
+                )
+            }
+            NiaRequest::DefineMapping(nia_define_mapping_request) => {
+                let nia_define_mapping_response =
+                    NiaDefineMappingResponse::from(
+                        nia_define_mapping_request,
+                        event_loop_handle,
+                    );
+
+                NiaResponse::DefineMapping(nia_define_mapping_response)
+            }
+            NiaRequest::ChangeMapping(nia_change_mapping_request) => {
+                let nia_change_mapping_response =
+                    NiaChangeMappingResponse::from(
+                        nia_change_mapping_request,
+                        event_loop_handle,
+                    );
+
+                NiaResponse::ChangeMapping(nia_change_mapping_response)
+            }
+            NiaRequest::RemoveMapping(nia_remove_mapping_request) => {
+                let nia_remove_mapping_response =
+                    NiaRemoveMappingResponse::from(
+                        nia_remove_mapping_request,
+                        event_loop_handle,
+                    );
+                NiaResponse::RemoveMapping(nia_remove_mapping_response)
+            }
+            NiaRequest::IsListening(nia_is_listening_request) => {
+                let nia_is_listening_response = NiaIsListeningResponse::from(
+                    nia_is_listening_request,
+                    event_loop_handle,
+                );
+                NiaResponse::IsListening(nia_is_listening_response)
+            }
+            NiaRequest::StartListening(nia_start_listening_request) => {
+                let nia_start_listening_response =
+                    NiaStartListeningResponse::from(
+                        nia_start_listening_request,
+                        event_loop_handle,
+                    );
+                NiaResponse::StartListening(nia_start_listening_response)
+            }
+            NiaRequest::StopListening(nia_stop_listening_request) => {
+                let nia_stop_listening_response =
+                    NiaStopListeningResponse::from(
+                        nia_stop_listening_request,
+                        event_loop_handle,
+                    );
+                NiaResponse::StopListening(nia_stop_listening_response)
+            }
         };
 
         nia_response
@@ -246,6 +320,43 @@ impl Serializable<NiaResponse, nia_protocol_rust::Response> for NiaResponse {
                 let remove_action = remove_action_response.to_pb();
 
                 response.set_remove_action_response(remove_action);
+            }
+            NiaResponse::GetDefinedMappings(get_defined_mappings_response) => {
+                let get_defined_mappings =
+                    get_defined_mappings_response.to_pb();
+
+                response
+                    .set_get_defined_mappings_response(get_defined_mappings);
+            }
+            NiaResponse::DefineMapping(define_mapping_response) => {
+                let define_mapping = define_mapping_response.to_pb();
+
+                response.set_define_mapping_response(define_mapping);
+            }
+            NiaResponse::ChangeMapping(change_mapping_response) => {
+                let change_mapping = change_mapping_response.to_pb();
+
+                response.set_change_mapping_response(change_mapping);
+            }
+            NiaResponse::RemoveMapping(remove_mapping_response) => {
+                let remove_mapping = remove_mapping_response.to_pb();
+
+                response.set_remove_mapping_response(remove_mapping);
+            }
+            NiaResponse::IsListening(is_listening_response) => {
+                let is_listening = is_listening_response.to_pb();
+
+                response.set_is_listening_response(is_listening);
+            }
+            NiaResponse::StartListening(start_listening_response) => {
+                let start_listening = start_listening_response.to_pb();
+
+                response.set_start_listening_response(start_listening);
+            }
+            NiaResponse::StopListening(stop_listening_response) => {
+                let stop_listening = stop_listening_response.to_pb();
+
+                response.set_stop_listening_response(stop_listening);
             }
         }
 

@@ -44,7 +44,7 @@ impl NiaServerError {
         NiaServerError::DeserializationError(message.into())
     }
 
-    pub fn interpreter_execution<S>(message: S) -> NiaServerError
+    pub fn interpreter_error<S>(message: S) -> NiaServerError
     where
         S: Into<String>,
     {

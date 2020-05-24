@@ -56,11 +56,8 @@ mod tests {
     #[test]
     fn serializes_and_deserializes_actions() {
         let expected = ActionList::new(vec![
-            NiaAction::new("arst", ActionKeyRelease::new(2).into()),
-            NiaAction::new(
-                "arst-2",
-                ActionExecuteOSCommand::new("arst-2").into(),
-            ),
+            NiaAction::new(ActionKeyRelease::new(2).into()),
+            NiaAction::new(ActionExecuteOSCommand::new("arst-2").into()),
         ]);
 
         let bytes = expected.to_bytes().unwrap();

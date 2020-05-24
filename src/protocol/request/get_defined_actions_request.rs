@@ -1,7 +1,5 @@
 use std::convert::TryFrom;
 
-use crate::protocol::GetRequestType;
-use crate::protocol::RequestType;
 use crate::protocol::Serializable;
 
 use nia_protocol_rust::GetDefinedActionsRequest;

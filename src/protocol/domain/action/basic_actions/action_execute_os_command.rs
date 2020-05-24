@@ -17,7 +17,7 @@ impl ActionExecuteOSCommand {
         }
     }
 
-    pub fn get_os_command(&self) -> &str {
+    pub fn get_os_command(&self) -> &String {
         &self.os_command
     }
 }

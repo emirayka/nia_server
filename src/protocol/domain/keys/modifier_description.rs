@@ -1,24 +1,25 @@
 use crate::error::NiaServerResult;
-use crate::protocol::{Key, Serializable};
+use crate::protocol::{NiaConvertable, NiaKey, Serializable};
+use nia_interpreter_core::ModifierDescription;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ModifierDescription {
-    key: Key,
+pub struct NiaModifierDescription {
+    key: NiaKey,
     alias: String,
 }
 
-impl ModifierDescription {
-    pub fn new<S>(key: Key, alias: S) -> ModifierDescription
+impl NiaModifierDescription {
+    pub fn new<S>(key: NiaKey, alias: S) -> NiaModifierDescription
     where
         S: Into<String>,
     {
-        ModifierDescription {
+        NiaModifierDescription {
             key,
             alias: alias.into(),
         }
     }
 
-    pub fn get_key(&self) -> Key {
+    pub fn get_key(&self) -> NiaKey {
         self.key
     }
 
@@ -27,8 +28,9 @@ impl ModifierDescription {
     }
 }
 
-impl Serializable<ModifierDescription, nia_protocol_rust::ModifierDescription>
-    for ModifierDescription
+impl
+    Serializable<NiaModifierDescription, nia_protocol_rust::ModifierDescription>
+    for NiaModifierDescription
 {
     fn to_pb(&self) -> nia_protocol_rust::ModifierDescription {
         let mut modifier_description_pb =
@@ -45,13 +47,38 @@ impl Serializable<ModifierDescription, nia_protocol_rust::ModifierDescription>
 
     fn from_pb(
         object_pb: nia_protocol_rust::ModifierDescription,
-    ) -> NiaServerResult<ModifierDescription> {
+    ) -> NiaServerResult<NiaModifierDescription> {
         let mut object_pb = object_pb;
 
-        let key = Key::from_pb(object_pb.take_key())?;
+        let key = NiaKey::from_pb(object_pb.take_key())?;
         let alias = object_pb.take_alias().to_string();
 
-        let modifier_description = ModifierDescription::new(key, alias);
+        let modifier_description = NiaModifierDescription::new(key, alias);
+
+        Ok(modifier_description)
+    }
+}
+
+impl
+    NiaConvertable<
+        NiaModifierDescription,
+        nia_interpreter_core::ModifierDescription,
+    > for NiaModifierDescription
+{
+    fn to_interpreter_repr(&self) -> nia_interpreter_core::ModifierDescription {
+        let interpreter_key = self.key.to_interpreter_repr();
+        let alias = self.alias.clone();
+
+        nia_interpreter_core::ModifierDescription::new(interpreter_key, alias)
+    }
+
+    fn from_interpreter_repr(
+        object_pb: &nia_interpreter_core::ModifierDescription,
+    ) -> NiaServerResult<NiaModifierDescription> {
+        let key = NiaKey::from_interpreter_repr(&object_pb.get_key())?;
+        let alias = object_pb.get_alias().clone();
+
+        let modifier_description = (NiaModifierDescription::new(key, alias));
 
         Ok(modifier_description)
     }
@@ -64,14 +91,14 @@ mod tests {
 
     #[test]
     fn serializes_and_deserializes() {
-        let key_expected = Key::make_key_2(1, 2);
+        let key_expected = NiaKey::make_key_2(1, 2);
         let alias_expected = "Control";
 
         let modifier_description =
-            ModifierDescription::new(key_expected, alias_expected);
+            NiaModifierDescription::new(key_expected, alias_expected);
         let bytes = modifier_description.to_bytes().unwrap();
         let modifier_description =
-            ModifierDescription::from_bytes(bytes).unwrap();
+            NiaModifierDescription::from_bytes(bytes).unwrap();
 
         let key_actual = modifier_description.get_key();
         let alias_actual = modifier_description.get_alias();

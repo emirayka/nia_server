@@ -1,7 +1,6 @@
 use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::protocol::RequestType;
-use crate::protocol::{GetRequestType, Serializable};
+use crate::protocol::Serializable;
 use nia_protocol_rust::RemoveDeviceByPathRequest;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

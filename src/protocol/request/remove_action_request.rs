@@ -1,9 +1,7 @@
 use crate::error::NiaServerError;
 use crate::error::NiaServerResult;
 
-use crate::protocol::GetRequestType;
 use crate::protocol::NiaAction;
-use crate::protocol::RequestType;
 use crate::protocol::Serializable;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

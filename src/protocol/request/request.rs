@@ -1,6 +1,7 @@
 use crate::protocol::*;
 
-use crate::error::{NiaServerError, NiaServerResult};
+use crate::error::NiaServerError;
+use crate::error::NiaServerResult;
 use nia_protocol_rust::Request;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,6 +18,13 @@ pub enum NiaRequest {
     GetDefinedActions(NiaGetDefinedActionsRequest),
     DefineAction(NiaDefineActionRequest),
     RemoveAction(NiaRemoveActionRequest),
+    GetDefinedMappings(NiaGetDefinedMappingsRequest),
+    DefineMapping(NiaDefineMappingRequest),
+    ChangeMapping(NiaChangeMappingRequest),
+    RemoveMapping(NiaRemoveMappingRequest),
+    IsListening(NiaIsListeningRequest),
+    StartListening(NiaStartListeningRequest),
+    StopListening(NiaStopListeningRequest),
 }
 
 macro_rules! make_from_implementation {
@@ -53,6 +61,16 @@ make_from_implementation!(
 );
 make_from_implementation!(NiaDefineActionRequest, NiaRequest::DefineAction);
 make_from_implementation!(NiaRemoveActionRequest, NiaRequest::RemoveAction);
+make_from_implementation!(
+    NiaGetDefinedMappingsRequest,
+    NiaRequest::GetDefinedMappings
+);
+make_from_implementation!(NiaDefineMappingRequest, NiaRequest::DefineMapping);
+make_from_implementation!(NiaChangeMappingRequest, NiaRequest::ChangeMapping);
+make_from_implementation!(NiaRemoveMappingRequest, NiaRequest::RemoveMapping);
+make_from_implementation!(NiaIsListeningRequest, NiaRequest::IsListening);
+make_from_implementation!(NiaStartListeningRequest, NiaRequest::StartListening);
+make_from_implementation!(NiaStopListeningRequest, NiaRequest::StopListening);
 
 impl Serializable<NiaRequest, nia_protocol_rust::Request> for NiaRequest {
     fn to_pb(&self) -> Request {
@@ -97,6 +115,23 @@ impl Serializable<NiaRequest, nia_protocol_rust::Request> for NiaRequest {
                 .set_define_action_request(define_action_request.to_pb()),
             NiaRequest::RemoveAction(remove_action_request) => request_pb
                 .set_remove_action_request(remove_action_request.to_pb()),
+            NiaRequest::GetDefinedMappings(get_defined_mappings_request) => {
+                request_pb.set_get_defined_mappings_request(
+                    get_defined_mappings_request.to_pb(),
+                )
+            }
+            NiaRequest::DefineMapping(define_mapping_request) => request_pb
+                .set_define_mapping_request(define_mapping_request.to_pb()),
+            NiaRequest::ChangeMapping(change_mapping_request) => request_pb
+                .set_change_mapping_request(change_mapping_request.to_pb()),
+            NiaRequest::RemoveMapping(remove_mapping_request) => request_pb
+                .set_remove_mapping_request(remove_mapping_request.to_pb()),
+            NiaRequest::IsListening(is_listening_request) => request_pb
+                .set_is_listening_request(is_listening_request.to_pb()),
+            NiaRequest::StartListening(start_listening_request) => request_pb
+                .set_start_listening_request(start_listening_request.to_pb()),
+            NiaRequest::StopListening(stop_listening_request) => request_pb
+                .set_stop_listening_request(stop_listening_request.to_pb()),
         }
 
         request_pb
@@ -169,6 +204,42 @@ impl Serializable<NiaRequest, nia_protocol_rust::Request> for NiaRequest {
                 request_pb.take_remove_action_request(),
             )?;
             NiaRequest::RemoveAction(remove_action_request)
+        } else if request_pb.has_get_defined_mappings_request() {
+            let get_defined_mappings_request =
+                NiaGetDefinedMappingsRequest::from_pb(
+                    request_pb.take_get_defined_mappings_request(),
+                )?;
+            NiaRequest::GetDefinedMappings(get_defined_mappings_request)
+        } else if request_pb.has_define_mapping_request() {
+            let define_mapping_request = NiaDefineMappingRequest::from_pb(
+                request_pb.take_define_mapping_request(),
+            )?;
+            NiaRequest::DefineMapping(define_mapping_request)
+        } else if request_pb.has_change_mapping_request() {
+            let change_mapping_request = NiaChangeMappingRequest::from_pb(
+                request_pb.take_change_mapping_request(),
+            )?;
+            NiaRequest::ChangeMapping(change_mapping_request)
+        } else if request_pb.has_remove_mapping_request() {
+            let remove_mapping_request = NiaRemoveMappingRequest::from_pb(
+                request_pb.take_remove_mapping_request(),
+            )?;
+            NiaRequest::RemoveMapping(remove_mapping_request)
+        } else if request_pb.has_is_listening_request() {
+            let is_listening_request = NiaIsListeningRequest::from_pb(
+                request_pb.take_is_listening_request(),
+            )?;
+            NiaRequest::IsListening(is_listening_request)
+        } else if request_pb.has_start_listening_request() {
+            let start_listening_request = NiaStartListeningRequest::from_pb(
+                request_pb.take_start_listening_request(),
+            )?;
+            NiaRequest::StartListening(start_listening_request)
+        } else if request_pb.has_stop_listening_request() {
+            let stop_listening_request = NiaStopListeningRequest::from_pb(
+                request_pb.take_stop_listening_request(),
+            )?;
+            NiaRequest::StopListening(stop_listening_request)
         } else {
             return NiaServerError::deserialization_error("Unknown request.")
                 .into();

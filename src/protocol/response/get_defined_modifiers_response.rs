@@ -1,5 +1,8 @@
 use crate::error::{NiaServerError, NiaServerResult};
-use crate::protocol::{NiaGetDefinedModifiersRequest, Serializable};
+use crate::protocol::{
+    NiaConvertable, NiaGetDefinedModifiersRequest, NiaModifierDescription,
+    Serializable,
+};
 use std::sync::MutexGuard;
 
 use nia_interpreter_core::NiaInterpreterCommand;
@@ -7,7 +10,7 @@ use nia_interpreter_core::NiaInterpreterCommandResult;
 use nia_interpreter_core::{
     EventLoopHandle, NiaGetDefinedModifiersCommandResult,
 };
-use nia_protocol_rust::GetDefinedModifiersResponse;
+use nia_protocol_rust::{GetDefinedModifiersResponse, ModifierDescription};
 
 #[derive(Debug, Clone)]
 pub struct NiaGetDefinedModifiersResponse {
@@ -25,14 +28,14 @@ impl NiaGetDefinedModifiersResponse {
         event_loop_handle
             .send_command(interpreter_command)
             .map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error sending command to the interpreter.",
                 )
             })?;
 
         let execution_result =
             event_loop_handle.receive_result().map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error reading command from the interpreter.",
                 )
             })?;
@@ -42,7 +45,7 @@ impl NiaGetDefinedModifiersResponse {
                 command_result,
             ) => NiaGetDefinedModifiersResponse { command_result },
             _ => {
-                return NiaServerError::interpreter_execution(
+                return NiaServerError::interpreter_error(
                     "Unexpected command result.",
                 )
                 .into();
@@ -90,34 +93,41 @@ impl
 
         match command_result {
             NiaGetDefinedModifiersCommandResult::Success(defined_modifiers) => {
-                let mut modifiers = Vec::new();
+                let modifiers = defined_modifiers
+                    .iter()
+                    .map(|interpreter_modifier| {
+                        NiaModifierDescription::from_interpreter_repr(
+                            interpreter_modifier,
+                        )
+                        .map(|modifier| modifier.to_pb())
+                    })
+                    .collect::<NiaServerResult<Vec<ModifierDescription>>>();
 
-                for defined_modifier in defined_modifiers {
-                    let mut key2_pb = nia_protocol_rust::Key2::new();
-                    key2_pb.set_device_id(defined_modifier.0);
-                    key2_pb.set_key_code(defined_modifier.1);
+                match modifiers {
+                    Ok(modifiers) => {
+                        let modifiers =
+                            protobuf::RepeatedField::from(modifiers);
 
-                    let mut key_pb = nia_protocol_rust::Key::new();
-                    key_pb.set_key_2(key2_pb);
+                        let mut success_result =
+                            nia_protocol_rust::GetDefinedModifiersResponse_SuccessResult::new();
 
-                    let mut modifier_pb =
-                        nia_protocol_rust::ModifierDescription::new();
-                    modifier_pb.set_key(key_pb);
-                    modifier_pb.set_alias(protobuf::Chars::from(
-                        defined_modifier.2.clone(),
-                    ));
+                        success_result.set_modifier_descriptions(modifiers);
+                        get_defined_modifiers_response
+                            .set_success_result(success_result);
+                    }
+                    Err(error) => {
+                        let message = error.get_message();
 
-                    modifiers.push(modifier_pb);
+                        let mut error_result =
+                            nia_protocol_rust::GetDefinedModifiersResponse_ErrorResult::new();
+
+                        error_result.set_message(protobuf::Chars::from(
+                            message.clone(),
+                        ));
+                        get_defined_modifiers_response
+                            .set_error_result(error_result);
+                    }
                 }
-
-                let modifiers = protobuf::RepeatedField::from(modifiers);
-
-                let mut success_result =
-                    nia_protocol_rust::GetDefinedModifiersResponse_SuccessResult::new();
-
-                success_result.set_modifier_descriptions(modifiers);
-                get_defined_modifiers_response
-                    .set_success_result(success_result);
             }
             NiaGetDefinedModifiersCommandResult::Error(error_message) => {
                 let mut error_result =

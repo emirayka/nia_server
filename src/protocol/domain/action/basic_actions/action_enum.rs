@@ -1,7 +1,7 @@
 use crate::protocol::domain::action::basic_actions::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ActionEnum {
+pub enum NiaActionEnum {
     KeyClick(ActionKeyClick),
     KeyPress(ActionKeyPress),
     KeyRelease(ActionKeyRelease),
@@ -22,7 +22,7 @@ pub enum ActionEnum {
 
 macro_rules! make_from_impl {
     ($underlying_type:ident, $variant:path) => {
-        impl From<$underlying_type> for ActionEnum {
+        impl From<$underlying_type> for NiaActionEnum {
             fn from(action: $underlying_type) -> Self {
                 $variant(action)
             }
@@ -30,19 +30,19 @@ macro_rules! make_from_impl {
     };
 }
 
-make_from_impl!(ActionKeyClick, ActionEnum::KeyClick);
-make_from_impl!(ActionKeyPress, ActionEnum::KeyPress);
-make_from_impl!(ActionKeyRelease, ActionEnum::KeyRelease);
+make_from_impl!(ActionKeyClick, NiaActionEnum::KeyClick);
+make_from_impl!(ActionKeyPress, NiaActionEnum::KeyPress);
+make_from_impl!(ActionKeyRelease, NiaActionEnum::KeyRelease);
 
-make_from_impl!(ActionMouseButtonClick, ActionEnum::MouseButtonClick);
-make_from_impl!(ActionMouseButtonPress, ActionEnum::MouseButtonPress);
-make_from_impl!(ActionMouseButtonRelease, ActionEnum::MouseButtonRelease);
+make_from_impl!(ActionMouseButtonClick, NiaActionEnum::MouseButtonClick);
+make_from_impl!(ActionMouseButtonPress, NiaActionEnum::MouseButtonPress);
+make_from_impl!(ActionMouseButtonRelease, NiaActionEnum::MouseButtonRelease);
 
-make_from_impl!(ActionMouseRelativeMove, ActionEnum::MouseRelativeMove);
-make_from_impl!(ActionMouseAbsoluteMove, ActionEnum::MouseAbsoluteMove);
+make_from_impl!(ActionMouseRelativeMove, NiaActionEnum::MouseRelativeMove);
+make_from_impl!(ActionMouseAbsoluteMove, NiaActionEnum::MouseAbsoluteMove);
 
-make_from_impl!(ActionExecuteCode, ActionEnum::ExecuteCode);
-make_from_impl!(ActionExecuteFunction, ActionEnum::ExecuteFunction);
-make_from_impl!(ActionExecuteOSCommand, ActionEnum::ExecuteOSCommand);
-make_from_impl!(ActionTextType, ActionEnum::TextType);
-make_from_impl!(ActionWait, ActionEnum::Wait);
+make_from_impl!(ActionExecuteCode, NiaActionEnum::ExecuteCode);
+make_from_impl!(ActionExecuteFunction, NiaActionEnum::ExecuteFunction);
+make_from_impl!(ActionExecuteOSCommand, NiaActionEnum::ExecuteOSCommand);
+make_from_impl!(ActionTextType, NiaActionEnum::TextType);
+make_from_impl!(ActionWait, NiaActionEnum::Wait);

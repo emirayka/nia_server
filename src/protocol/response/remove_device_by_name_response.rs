@@ -10,8 +10,8 @@ use nia_interpreter_core::{
 use crate::error::{NiaServerError, NiaServerResult};
 
 use crate::protocol::{NiaRemoveDeviceByNameRequest, Serializable};
-use nia_protocol_rust::RemoveDeviceByNameResponse;
 use crate::server::Server;
+use nia_protocol_rust::RemoveDeviceByNameResponse;
 
 #[derive(Debug, Clone)]
 pub struct NiaRemoveDeviceByNameResponse {
@@ -24,8 +24,7 @@ impl NiaRemoveDeviceByNameResponse {
         nia_remove_keyboard_by_name_request: NiaRemoveDeviceByNameRequest,
         event_loop_handle: MutexGuard<EventLoopHandle>,
     ) -> Result<NiaRemoveDeviceByNameResponse, NiaServerError> {
-        let device_name =
-            nia_remove_keyboard_by_name_request.get_device_name();
+        let device_name = nia_remove_keyboard_by_name_request.get_device_name();
 
         let interpreter_command =
             NiaInterpreterCommand::make_remove_device_by_name_command(
@@ -35,14 +34,14 @@ impl NiaRemoveDeviceByNameResponse {
         event_loop_handle
             .send_command(interpreter_command)
             .map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error sending command to the interpreter.",
                 )
             })?;
 
         let execution_result =
             event_loop_handle.receive_result().map_err(|_| {
-                NiaServerError::interpreter_execution(
+                NiaServerError::interpreter_error(
                     "Error reading command from the interpreter.",
                 )
             })?;
@@ -53,7 +52,7 @@ impl NiaRemoveDeviceByNameResponse {
                 NiaRemoveDeviceByNameResponse { command_result }
             }
             _ => {
-                return NiaServerError::interpreter_execution(
+                return NiaServerError::interpreter_error(
                     "Unexpected command result.",
                 )
                 .into()
