@@ -1,4 +1,3 @@
-use nia_error::Error;
 use std::borrow::Borrow;
 
 #[derive(Clone, Debug)]

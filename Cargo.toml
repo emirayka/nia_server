@@ -13,7 +13,6 @@ chrono = "0.4.11"
 evdev-rs = "0.3.1"
 ws = "0.9.1"
 protobuf = { version = "2.14.0", features = ["with-bytes"] }
-nia_error = { path = "../nia_error" }
 nia_protocol_rust = { path = "../nia_protocol/nia_protocol_rust" }
 nia_interpreter_core = { path = "../nia_interpreter_core" }
 

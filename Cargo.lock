@@ -652,13 +652,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nia_error"
-version = "0.1.0"
-dependencies = [
- "nia_basic_assertions",
-]
-
-[[package]]
 name = "nia_event_codes"
 version = "0.1.0"
 dependencies = [
@@ -714,7 +707,6 @@ dependencies = [
  "evdev-rs",
  "log",
  "nia_basic_assertions",
- "nia_error",
  "nia_interpreter_core",
  "nia_protocol_rust",
  "protobuf",
