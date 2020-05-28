@@ -7,9 +7,9 @@ use nia_interpreter_core::{EventLoopHandle, NiaDefineActionCommandResult};
 
 use crate::error::{NiaServerError, NiaServerResult};
 
-use crate::protocol::Serializable;
 use crate::protocol::{NiaAction, NiaNamedAction};
 use crate::protocol::{NiaActionEnum, NiaDefineActionRequest};
+use crate::protocol::{NiaConvertable, Serializable};
 use nia_protocol_rust::DefineActionResponse;
 
 #[derive(Debug, Clone)]
@@ -18,88 +18,9 @@ pub struct NiaDefineActionResponse {
 }
 
 fn make_define_action_command(action: NiaNamedAction) -> NiaInterpreterCommand {
-    match action.get_action().get_action() {
-        NiaActionEnum::KeyPress(action_key_press) => {
-            NiaInterpreterCommand::make_define_key_press_action_command(
-                action.get_action_name(),
-                action_key_press.get_key_code()
-            )
-        }
-        NiaActionEnum::KeyClick(action_key_click) => {
-            NiaInterpreterCommand::make_define_key_click_action_command(
-                action.get_action_name(),
-                action_key_click.get_key_code()
-            )
-        }
-        NiaActionEnum::KeyRelease(action_key_release) => {
-            NiaInterpreterCommand::make_define_key_release_action_command(
-                action.get_action_name(),
-                action_key_release.get_key_code()
-            )
-        }
-        NiaActionEnum::MouseButtonClick(action_mouse_button_click) => {
-            NiaInterpreterCommand::make_define_mouse_button_click_action_command(
-                action.get_action_name(),
-                action_mouse_button_click.get_button_code()
-            )
-        }
-        NiaActionEnum::MouseButtonPress(action_mouse_button_press) => {
-            NiaInterpreterCommand::make_define_mouse_button_press_action_command(
-                action.get_action_name(),
-                action_mouse_button_press.get_button_code()
-            )
-        }
-        NiaActionEnum::MouseButtonRelease(action_mouse_button_release) => {
-            NiaInterpreterCommand::make_define_mouse_button_release_action_command(
-                action.get_action_name(),
-                action_mouse_button_release.get_button_code()
-            )
-        }
-        NiaActionEnum::MouseAbsoluteMove(action_mouse_absolute_move) => {
-            NiaInterpreterCommand::make_define_mouse_absolute_move_action_command(
-                action.get_action_name(),
-                action_mouse_absolute_move.get_x(),
-                action_mouse_absolute_move.get_y(),
-            )
-        }
-        NiaActionEnum::MouseRelativeMove(action_mouse_relative_move) => {
-            NiaInterpreterCommand::make_define_mouse_relative_move_action_command(
-                action.get_action_name(),
-                action_mouse_relative_move.get_dx(),
-                action_mouse_relative_move.get_dy(),
-            )
-        }
-        NiaActionEnum::ExecuteCode(action_execute_code) => {
-            NiaInterpreterCommand::make_define_execute_code_action_command(
-                action.get_action_name(),
-                action_execute_code.get_code(),
-            )
-        }
-        NiaActionEnum::ExecuteFunction(action_execute_function) => {
-            NiaInterpreterCommand::make_define_execute_code_action_command(
-                action.get_action_name(),
-                action_execute_function.get_function_name(),
-            )
-        }
-        NiaActionEnum::ExecuteOSCommand(action_execute_os_command) => {
-            NiaInterpreterCommand::make_define_execute_os_command_action_command(
-                action.get_action_name(),
-                action_execute_os_command.get_os_command(),
-            )
-        }
-        NiaActionEnum::TextType(action_text_type) => {
-            NiaInterpreterCommand::make_define_text_type_action_command(
-                action.get_action_name(),
-                action_text_type.get_text(),
-            )
-        }
-        NiaActionEnum::Wait(action_wait) => {
-            NiaInterpreterCommand::make_define_wait_action_command(
-                action.get_action_name(),
-                action_wait.get_ms(),
-            )
-        }
-    }
+    let interpreter_named_action = action.to_interpreter_repr();
+
+    NiaInterpreterCommand::make_define_action_command(interpreter_named_action)
 }
 
 impl NiaDefineActionResponse {

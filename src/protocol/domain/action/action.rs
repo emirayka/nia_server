@@ -5,6 +5,7 @@ use crate::protocol::Serializable;
 use crate::protocol::{NiaActionEnum, NiaConvertable};
 
 use crate::protocol::domain::action::basic_actions::*;
+use nia_interpreter_core::Action;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NiaAction {
@@ -45,6 +46,7 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                     action_key_release.get_key_code(),
                 )
             }
+
             NiaActionEnum::MouseButtonClick(action_mouse_button_click) => {
                 nia_interpreter_core::Action::MouseButtonClick(
                     action_mouse_button_click.get_button_code(),
@@ -60,6 +62,43 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                     action_mouse_button_release.get_button_code(),
                 )
             }
+
+            NiaActionEnum::ControlKeyClick(action_control_key_click) => {
+                nia_interpreter_core::Action::ControlKeyClick(
+                    action_control_key_click.get_key_code(),
+                )
+            }
+            NiaActionEnum::FunctionKeyClick(action_function_key_click) => {
+                nia_interpreter_core::Action::FunctionKeyClick(
+                    action_function_key_click.get_key_code(),
+                )
+            }
+            NiaActionEnum::KPKeyClick(action_kp_key_click) => {
+                nia_interpreter_core::Action::KPKeyClick(
+                    action_kp_key_click.get_key_code(),
+                )
+            }
+            NiaActionEnum::MouseButtonKeyClick(
+                action_mouse_button_key_click,
+            ) => nia_interpreter_core::Action::MouseButtonKeyClick(
+                action_mouse_button_key_click.get_key_code(),
+            ),
+            NiaActionEnum::MultimediaKeyClick(action_multimedia_key_click) => {
+                nia_interpreter_core::Action::MultimediaKeyClick(
+                    action_multimedia_key_click.get_key_code(),
+                )
+            }
+            NiaActionEnum::NumberKeyClick(action_number_key_click) => {
+                nia_interpreter_core::Action::NumberKeyClick(
+                    action_number_key_click.get_key_code(),
+                )
+            }
+            NiaActionEnum::TextKeyClick(action_text_key_click) => {
+                nia_interpreter_core::Action::TextKeyClick(
+                    action_text_key_click.get_key_code(),
+                )
+            }
+
             NiaActionEnum::MouseAbsoluteMove(action_mouse_absolute_move) => {
                 nia_interpreter_core::Action::MouseAbsoluteMove(
                     action_mouse_absolute_move.get_x(),
@@ -113,6 +152,7 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
             nia_interpreter_core::Action::KeyRelease(key_code) => NiaAction {
                 action: ActionKeyRelease::new(*key_code).into(),
             },
+
             nia_interpreter_core::Action::MouseButtonPress(button_code) => {
                 NiaAction {
                     action: ActionMouseButtonPress::new(*button_code).into(),
@@ -128,6 +168,43 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                     action: ActionMouseButtonRelease::new(*button_code).into(),
                 }
             }
+
+            Action::TextKeyClick(key_code) => {
+                NiaAction {
+                    action: ActionTextKeyClick::new(*key_code).into(),
+                }
+            }
+            Action::NumberKeyClick(key_code) => {
+                NiaAction {
+                    action: ActionNumberKeyClick::new(*key_code).into(),
+                }
+            }
+            Action::FunctionKeyClick(key_code) => {
+                NiaAction {
+                    action: ActionFunctionKeyClick::new(*key_code).into(),
+                }
+            }
+            Action::ControlKeyClick(key_code) => {
+                NiaAction {
+                    action: ActionControlKeyClick::new(*key_code).into(),
+                }
+            }
+            Action::KPKeyClick(key_code) => {
+                NiaAction {
+                    action: ActionKPKeyClick::new(*key_code).into(),
+                }
+            }
+            Action::MultimediaKeyClick(key_code) => {
+                NiaAction {
+                    action: ActionMultimediaKeyClick::new(*key_code).into(),
+                }
+            }
+            Action::MouseButtonKeyClick(key_code) => {
+                NiaAction {
+                    action: ActionMouseButtonKeyClick::new(*key_code).into(),
+                }
+            }
+
             nia_interpreter_core::Action::MouseAbsoluteMove(x, y) => {
                 NiaAction {
                     action: ActionMouseAbsoluteMove::new(*x, *y).into(),
@@ -212,6 +289,56 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
                 action_pb.set_action_mouse_button_release(
                     action_mouse_button_release_pb,
                 )
+            }
+
+            NiaActionEnum::ControlKeyClick(action_control_key_click) => {
+                let action_control_key_click_pb =
+                    action_control_key_click.to_pb();
+
+                action_pb
+                    .set_action_control_key_click(action_control_key_click_pb)
+            }
+            NiaActionEnum::FunctionKeyClick(action_function_key_click) => {
+                let action_function_key_click_pb =
+                    action_function_key_click.to_pb();
+
+                action_pb
+                    .set_action_function_key_click(action_function_key_click_pb)
+            }
+            NiaActionEnum::KPKeyClick(action_kp_key_click) => {
+                let action_kp_key_click_pb = action_kp_key_click.to_pb();
+
+                action_pb.set_action_kp_key_click(action_kp_key_click_pb)
+            }
+            NiaActionEnum::MouseButtonKeyClick(
+                action_mouse_button_key_click,
+            ) => {
+                let action_mouse_button_key_click_pb =
+                    action_mouse_button_key_click.to_pb();
+
+                action_pb.set_action_mouse_button_key_click(
+                    action_mouse_button_key_click_pb,
+                )
+            }
+            NiaActionEnum::MultimediaKeyClick(action_multimedia_key_click) => {
+                let action_multimedia_key_click_pb =
+                    action_multimedia_key_click.to_pb();
+
+                action_pb.set_action_multimedia_key_click(
+                    action_multimedia_key_click_pb,
+                )
+            }
+            NiaActionEnum::NumberKeyClick(action_number_key_click) => {
+                let action_number_key_click_pb =
+                    action_number_key_click.to_pb();
+
+                action_pb
+                    .set_action_number_key_click(action_number_key_click_pb)
+            }
+            NiaActionEnum::TextKeyClick(action_text_key_click) => {
+                let action_text_key_click_pb = action_text_key_click.to_pb();
+
+                action_pb.set_action_text_key_click(action_text_key_click_pb)
             }
 
             NiaActionEnum::MouseAbsoluteMove(action_mouse_absolute_move) => {
@@ -300,6 +427,45 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
 
             ActionMouseButtonRelease::from_pb(action_mouse_button_release_pb)?
                 .into()
+        } else if object_pb.has_action_text_key_click() {
+            let action_text_key_click_pb =
+                object_pb.take_action_text_key_click();
+
+            ActionTextKeyClick::from_pb(action_text_key_click_pb)?.into()
+        } else if object_pb.has_action_number_key_click() {
+            let action_number_key_click_pb =
+                object_pb.take_action_number_key_click();
+
+            ActionNumberKeyClick::from_pb(action_number_key_click_pb)?.into()
+        } else if object_pb.has_action_function_key_click() {
+            let action_function_key_click_pb =
+                object_pb.take_action_function_key_click();
+
+            ActionFunctionKeyClick::from_pb(action_function_key_click_pb)?
+                .into()
+        } else if object_pb.has_action_control_key_click() {
+            let action_control_key_click_pb =
+                object_pb.take_action_control_key_click();
+
+            ActionControlKeyClick::from_pb(action_control_key_click_pb)?.into()
+        } else if object_pb.has_action_kp_key_click() {
+            let action_kp_key_click_pb = object_pb.take_action_kp_key_click();
+
+            ActionKPKeyClick::from_pb(action_kp_key_click_pb)?.into()
+        } else if object_pb.has_action_multimedia_key_click() {
+            let action_multimedia_key_click_pb =
+                object_pb.take_action_multimedia_key_click();
+
+            ActionMultimediaKeyClick::from_pb(action_multimedia_key_click_pb)?
+                .into()
+        } else if object_pb.has_action_mouse_button_key_click() {
+            let action_mouse_button_key_click_pb =
+                object_pb.take_action_mouse_button_key_click();
+
+            ActionMouseButtonKeyClick::from_pb(
+                action_mouse_button_key_click_pb,
+            )?
+            .into()
         } else if object_pb.has_action_mouse_absolute_move() {
             let action_mouse_absolute_move_pb =
                 object_pb.take_action_mouse_absolute_move();
@@ -423,6 +589,84 @@ mod tests {
         #[test]
         fn serializes_and_deserializes_action_mouse_button_release() {
             let action = ActionMouseButtonRelease::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_text_key_click() {
+            let action = ActionTextKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_number_key_click() {
+            let action = ActionNumberKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_function_key_click() {
+            let action = ActionFunctionKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_control_key_click() {
+            let action = ActionControlKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_kp_key_click() {
+            let action = ActionKPKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_multimedia_key_click() {
+            let action = ActionMultimediaKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_mouse_button_key_click() {
+            let action = ActionMouseButtonKeyClick::new(1).into();
 
             let expected = NiaAction { action };
 
@@ -589,6 +833,91 @@ mod tests {
         #[test]
         fn serializes_and_deserializes_action_mouse_button_release() {
             let action = ActionMouseButtonRelease::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_text_key_click() {
+            let action = ActionTextKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_number_key_click() {
+            let action = ActionNumberKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_function_key_click() {
+            let action = ActionFunctionKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_control_key_click() {
+            let action = ActionControlKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_kp_key_click() {
+            let action = ActionKPKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_multimedia_key_click() {
+            let action = ActionMultimediaKeyClick::new(1).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_mouse_button_key_click() {
+            let action = ActionMouseButtonKeyClick::new(1).into();
 
             let expected = NiaAction { action };
 

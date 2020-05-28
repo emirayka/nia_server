@@ -10,6 +10,14 @@ pub enum NiaActionEnum {
     MouseButtonPress(ActionMouseButtonPress),
     MouseButtonRelease(ActionMouseButtonRelease),
 
+    ControlKeyClick(ActionControlKeyClick),
+    FunctionKeyClick(ActionFunctionKeyClick),
+    KPKeyClick(ActionKPKeyClick),
+    MouseButtonKeyClick(ActionMouseButtonKeyClick),
+    MultimediaKeyClick(ActionMultimediaKeyClick),
+    NumberKeyClick(ActionNumberKeyClick),
+    TextKeyClick(ActionTextKeyClick),
+
     MouseAbsoluteMove(ActionMouseAbsoluteMove),
     MouseRelativeMove(ActionMouseRelativeMove),
 
@@ -37,6 +45,15 @@ make_from_impl!(ActionKeyRelease, NiaActionEnum::KeyRelease);
 make_from_impl!(ActionMouseButtonClick, NiaActionEnum::MouseButtonClick);
 make_from_impl!(ActionMouseButtonPress, NiaActionEnum::MouseButtonPress);
 make_from_impl!(ActionMouseButtonRelease, NiaActionEnum::MouseButtonRelease);
+
+make_from_impl!(ActionControlKeyClick, NiaActionEnum::ControlKeyClick);
+make_from_impl!(ActionFunctionKeyClick, NiaActionEnum::FunctionKeyClick);
+make_from_impl!(ActionKPKeyClick, NiaActionEnum::KPKeyClick);
+#[rustfmt::skip]
+make_from_impl!(ActionMouseButtonKeyClick, NiaActionEnum::MouseButtonKeyClick);
+make_from_impl!(ActionMultimediaKeyClick, NiaActionEnum::MultimediaKeyClick);
+make_from_impl!(ActionNumberKeyClick, NiaActionEnum::NumberKeyClick);
+make_from_impl!(ActionTextKeyClick, NiaActionEnum::TextKeyClick);
 
 make_from_impl!(ActionMouseRelativeMove, NiaActionEnum::MouseRelativeMove);
 make_from_impl!(ActionMouseAbsoluteMove, NiaActionEnum::MouseAbsoluteMove);

@@ -100,18 +100,6 @@ impl Server {
         let mut server = self;
         let mut interpreter = Interpreter::new();
 
-        nia_interpreter_core::library::define_action_execute_code(
-            &mut interpreter,
-            "test2",
-            "code2",
-        )
-        .unwrap();
-        nia_interpreter_core::library::define_action_execute_code(
-            &mut interpreter,
-            "test",
-            "code",
-        )
-        .unwrap();
         nia_interpreter_core::library::define_global_mapping(
             &mut interpreter,
             &nia_interpreter_core::Mapping::new(
