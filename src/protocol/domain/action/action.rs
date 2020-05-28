@@ -111,6 +111,16 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                     action_mouse_relative_move.get_dy(),
                 )
             }
+
+            NiaActionEnum::Wait(action_wait) => {
+                nia_interpreter_core::Action::Wait(action_wait.get_ms())
+            }
+            NiaActionEnum::TextType(action_text_type) => {
+                nia_interpreter_core::Action::TextType(String::from(
+                    action_text_type.get_text(),
+                ))
+            }
+
             NiaActionEnum::ExecuteCode(action_execute_code) => {
                 nia_interpreter_core::Action::ExecuteCode(String::from(
                     action_execute_code.get_code(),
@@ -126,13 +136,10 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                     action_execute_os_command.get_os_command(),
                 ))
             }
-            NiaActionEnum::TextType(action_text_type) => {
-                nia_interpreter_core::Action::TextType(String::from(
-                    action_text_type.get_text(),
+            NiaActionEnum::ExecuteNamedAction(action_execute_named_action) => {
+                nia_interpreter_core::Action::ExecuteNamedAction(String::from(
+                    action_execute_named_action.get_action_name(),
                 ))
-            }
-            NiaActionEnum::Wait(action_wait) => {
-                nia_interpreter_core::Action::Wait(action_wait.get_ms())
             }
         };
 
@@ -215,11 +222,11 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                     action: ActionMouseRelativeMove::new(*dx, *dy).into(),
                 }
             }
-            nia_interpreter_core::Action::TextType(text_to_type) => NiaAction {
-                action: ActionTextType::new(text_to_type).into(),
-            },
             nia_interpreter_core::Action::Wait(ms) => NiaAction {
                 action: ActionWait::new(*ms).into(),
+            },
+            nia_interpreter_core::Action::TextType(text_to_type) => NiaAction {
+                action: ActionTextType::new(text_to_type).into(),
             },
             nia_interpreter_core::Action::ExecuteCode(code_to_execute) => {
                 NiaAction {
@@ -234,6 +241,11 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
             nia_interpreter_core::Action::ExecuteOSCommand(os_command) => {
                 NiaAction {
                     action: ActionExecuteOSCommand::new(os_command).into(),
+                }
+            }
+            nia_interpreter_core::Action::ExecuteNamedAction(action_name) => {
+                NiaAction {
+                    action: ActionExecuteNamedAction::new(action_name).into(),
                 }
             }
             nia_interpreter_core::Action::ExecuteFunctionValue(function_value) => {
@@ -358,6 +370,17 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
                 )
             }
 
+            NiaActionEnum::Wait(action_wait) => {
+                let action_wait_pb = action_wait.to_pb();
+
+                action_pb.set_action_wait(action_wait_pb)
+            }
+            NiaActionEnum::TextType(action_text_type) => {
+                let action_text_type_pb = action_text_type.to_pb();
+
+                action_pb.set_action_text_type(action_text_type_pb)
+            }
+
             NiaActionEnum::ExecuteCode(action_execute_code) => {
                 let action_execute_code_pb = action_execute_code.to_pb();
 
@@ -377,15 +400,13 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
                 action_pb
                     .set_action_execute_os_command(action_execute_os_command_pb)
             }
-            NiaActionEnum::TextType(action_text_type) => {
-                let action_text_type_pb = action_text_type.to_pb();
+            NiaActionEnum::ExecuteNamedAction(action_execute_named_action) => {
+                let action_execute_named_action_pb =
+                    action_execute_named_action.to_pb();
 
-                action_pb.set_action_text_type(action_text_type_pb)
-            }
-            NiaActionEnum::Wait(action_wait) => {
-                let action_wait_pb = action_wait.to_pb();
-
-                action_pb.set_action_wait(action_wait_pb)
+                action_pb.set_action_execute_named_action(
+                    action_execute_named_action_pb,
+                )
             }
         }
 
@@ -478,6 +499,14 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
 
             ActionMouseRelativeMove::from_pb(action_mouse_relative_move_pb)?
                 .into()
+        } else if object_pb.has_action_wait() {
+            let action_wait_pb = object_pb.take_action_wait();
+
+            ActionWait::from_pb(action_wait_pb)?.into()
+        } else if object_pb.has_action_text_type() {
+            let action_text_type_pb = object_pb.take_action_text_type();
+
+            ActionTextType::from_pb(action_text_type_pb)?.into()
         } else if object_pb.has_action_execute_code() {
             let action_execute_code_pb = object_pb.take_action_execute_code();
 
@@ -493,14 +522,12 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
 
             ActionExecuteOSCommand::from_pb(action_execute_os_command_pb)?
                 .into()
-        } else if object_pb.has_action_text_type() {
-            let action_text_type_pb = object_pb.take_action_text_type();
+        } else if object_pb.has_action_execute_named_action() {
+            let action_execute_named_action_pb =
+                object_pb.take_action_execute_named_action();
 
-            ActionTextType::from_pb(action_text_type_pb)?.into()
-        } else if object_pb.has_action_wait() {
-            let action_wait_pb = object_pb.take_action_wait();
-
-            ActionWait::from_pb(action_wait_pb)?.into()
+            ActionExecuteNamedAction::from_pb(action_execute_named_action_pb)?
+                .into()
         } else {
             return NiaServerError::deserialization_error(
                 "Invalid action type.",
@@ -701,6 +728,29 @@ mod tests {
         }
 
         #[test]
+        fn serializes_and_deserializes_action_wait() {
+            let action = ActionWait::new(1000).into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_text_type() {
+            let action = ActionTextType::new("arst").into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
         fn serializes_and_deserializes_action_execute_code() {
             let action = ActionExecuteCode::new("(+ 1 2)").into();
 
@@ -737,20 +787,8 @@ mod tests {
         }
 
         #[test]
-        fn serializes_and_deserializes_action_text_type() {
-            let action = ActionTextType::new("arst").into();
-
-            let expected = NiaAction { action };
-
-            let bytes = expected.to_bytes().unwrap();
-            let actual = NiaAction::from_bytes(bytes).unwrap();
-
-            assert_eq!(expected, actual);
-        }
-
-        #[test]
-        fn serializes_and_deserializes_action_wait() {
-            let action = ActionWait::new(1000).into();
+        fn serializes_and_deserializes_action_execute_named_action() {
+            let action = ActionExecuteNamedAction::new("print-nya").into();
 
             let expected = NiaAction { action };
 
@@ -955,6 +993,30 @@ mod tests {
         }
 
         #[test]
+        fn serializes_and_deserializes_action_wait() {
+            let action = ActionWait::new(1000).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
+        fn serializes_and_deserializes_action_text_type() {
+            let action = ActionTextType::new("arst").into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+        #[test]
         fn serializes_and_deserializes_action_execute_code() {
             let action = ActionExecuteCode::new("(+ 1 2)").into();
 
@@ -994,21 +1056,9 @@ mod tests {
         }
 
         #[test]
-        fn serializes_and_deserializes_action_text_type() {
-            let action = ActionTextType::new("arst").into();
-
-            let expected = NiaAction { action };
-
-            let interpreter_action = expected.to_interpreter_repr();
-            let actual =
-                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
-
-            assert_eq!(expected, actual);
-        }
-
-        #[test]
-        fn serializes_and_deserializes_action_wait() {
-            let action = ActionWait::new(1000).into();
+        fn serializes_and_deserializes_action_execute_named_action() {
+            let action =
+                ActionExecuteNamedAction::new(String::from("print-nya")).into();
 
             let expected = NiaAction { action };
 

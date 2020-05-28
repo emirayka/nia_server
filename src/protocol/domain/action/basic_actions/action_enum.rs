@@ -21,11 +21,13 @@ pub enum NiaActionEnum {
     MouseAbsoluteMove(ActionMouseAbsoluteMove),
     MouseRelativeMove(ActionMouseRelativeMove),
 
+    Wait(ActionWait),
+    TextType(ActionTextType),
+
     ExecuteCode(ActionExecuteCode),
     ExecuteFunction(ActionExecuteFunction),
     ExecuteOSCommand(ActionExecuteOSCommand),
-    TextType(ActionTextType),
-    Wait(ActionWait),
+    ExecuteNamedAction(ActionExecuteNamedAction),
 }
 
 macro_rules! make_from_impl {
@@ -58,8 +60,10 @@ make_from_impl!(ActionTextKeyClick, NiaActionEnum::TextKeyClick);
 make_from_impl!(ActionMouseRelativeMove, NiaActionEnum::MouseRelativeMove);
 make_from_impl!(ActionMouseAbsoluteMove, NiaActionEnum::MouseAbsoluteMove);
 
+make_from_impl!(ActionWait, NiaActionEnum::Wait);
+make_from_impl!(ActionTextType, NiaActionEnum::TextType);
+
 make_from_impl!(ActionExecuteCode, NiaActionEnum::ExecuteCode);
 make_from_impl!(ActionExecuteFunction, NiaActionEnum::ExecuteFunction);
 make_from_impl!(ActionExecuteOSCommand, NiaActionEnum::ExecuteOSCommand);
-make_from_impl!(ActionTextType, NiaActionEnum::TextType);
-make_from_impl!(ActionWait, NiaActionEnum::Wait);
+make_from_impl!(ActionExecuteNamedAction, NiaActionEnum::ExecuteNamedAction);
