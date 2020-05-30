@@ -26,5 +26,14 @@ fn main() {
         .filter(Some("ws"), LevelFilter::Error)
         .init();
 
-    server::Server::new().start();
+    let server = match server::Server::new() {
+        Ok(server) => server,
+        Err(error) => {
+            println!("Cannot start server because of error:");
+            println!("{:?}", error);
+            return;
+        }
+    };
+
+    server.start();
 }

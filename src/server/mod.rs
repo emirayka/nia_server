@@ -21,15 +21,15 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new() -> Server {
-        let available_device_paths = crate::utils::get_available_devices()
-            .expect("Cannot get device list.");
+    pub fn new() -> NiaServerResult<Server> {
+        let available_device_paths = crate::utils::get_available_devices()?;
 
         let devices_info =
-            crate::utils::get_devices_info(&available_device_paths)
-                .expect("Cannot parse list.");
+            crate::utils::get_devices_info(&available_device_paths)?;
 
-        Server { devices_info }
+        let server = Server { devices_info };
+
+        Ok(server)
     }
 
     pub fn get_devices(&self) -> &Vec<DeviceInfo> {
@@ -124,6 +124,8 @@ impl Server {
         listen("127.0.0.1:12112", |out| {
             let event_loop_handle = event_loop_handle.clone();
             let server_handle = server_handle.clone();
+
+            println!("Client connected");
 
             move |msg| {
                 match msg {

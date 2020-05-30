@@ -1,5 +1,5 @@
 use crate::error::{NiaServerError, NiaServerResult};
-use crate::protocol::{KeyDescription, Serializable};
+use crate::protocol::{KeyDescription, Serializable, DEFAULT_DEVICE_MODEL};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DeviceModel {
@@ -21,7 +21,12 @@ impl DeviceModel {
         }
     }
 
-    pub fn from_string(string: String) -> NiaServerResult<DeviceModel> {
+    pub fn from_string<S>(string: S) -> NiaServerResult<DeviceModel>
+    where
+        S: Into<String>,
+    {
+        let string = string.into();
+
         let integers: Vec<i32> = string
             .lines()
             .flat_map(|line| line.split_whitespace())
@@ -71,6 +76,11 @@ impl DeviceModel {
             DeviceModel::new(key_descriptions, device_width, device_height);
 
         Ok(device_model)
+    }
+
+    pub fn default() -> DeviceModel {
+        DeviceModel::from_string(DEFAULT_DEVICE_MODEL)
+            .expect("Failure: default device model is invalid.")
     }
 
     pub fn get_key_descriptions(&self) -> &Vec<KeyDescription> {
