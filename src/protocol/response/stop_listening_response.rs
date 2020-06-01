@@ -94,8 +94,9 @@ impl
                     nia_protocol_rust::StopListeningResponse_SuccessResult::new(
                     );
 
-                success_result
-                    .set_message(protobuf::Chars::from(String::from("")));
+                success_result.set_message(protobuf::Chars::from(
+                    String::from("Success."),
+                ));
                 stop_listening_response.set_success_result(success_result);
             }
             NiaStopListeningCommandResult::Error(error_message) => {

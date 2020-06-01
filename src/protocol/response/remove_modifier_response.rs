@@ -100,8 +100,9 @@ impl
                 let mut success_result =
                     nia_protocol_rust::RemoveModifierResponse_SuccessResult::new();
 
-                success_result
-                    .set_message(protobuf::Chars::from(String::from("")));
+                success_result.set_message(protobuf::Chars::from(
+                    String::from("Success"),
+                ));
                 remove_modifier_response.set_success_result(success_result);
             }
             NiaRemoveModifierCommandResult::Error(error_message) => {

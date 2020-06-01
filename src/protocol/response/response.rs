@@ -6,7 +6,6 @@ use nia_protocol_rust::Response;
 use crate::error::NiaServerError;
 use crate::error::NiaServerResult;
 
-use crate::protocol::NiaExecuteCodeResponse;
 use crate::protocol::NiaGetDefinedActionsResponse;
 use crate::protocol::NiaGetDefinedMappingsRequest;
 use crate::protocol::NiaGetDefinedMappingsResponse;
@@ -24,6 +23,7 @@ use crate::protocol::{NiaChangeMappingResponse, NiaDefineActionResponse};
 use crate::protocol::{NiaDefineDeviceResponse, NiaStartListeningResponse};
 use crate::protocol::{NiaDefineMappingResponse, NiaStopListeningResponse};
 use crate::protocol::{NiaDefineModifierResponse, NiaIsListeningResponse};
+use crate::protocol::{NiaExecuteCodeResponse, NiaRemoveDeviceByIdResponse};
 use crate::server::Server;
 
 #[derive(Debug, Clone)]
@@ -34,6 +34,7 @@ pub enum NiaResponse {
     DefineKeyboard(NiaDefineDeviceResponse),
     RemoveKeyboardByPath(NiaRemoveDeviceByPathResponse),
     RemoveKeyboardByName(NiaRemoveDeviceByNameResponse),
+    RemoveKeyboardById(NiaRemoveDeviceByIdResponse),
     GetDefinedModifiers(NiaGetDefinedModifiersResponse),
     DefineModifier(NiaDefineModifierResponse),
     RemoveModifier(NiaRemoveModifierResponse),
@@ -114,6 +115,18 @@ impl NiaResponse {
 
                 NiaResponse::RemoveKeyboardByName(
                     nia_remove_keyboard_by_name_response,
+                )
+            }
+            NiaRequest::RemoveDeviceById(nia_remove_keyboard_by_id_request) => {
+                let nia_remove_keyboard_by_id_response =
+                    NiaRemoveDeviceByIdResponse::from(
+                        server,
+                        nia_remove_keyboard_by_id_request,
+                        event_loop_handle,
+                    );
+
+                NiaResponse::RemoveKeyboardById(
+                    nia_remove_keyboard_by_id_response,
                 )
             }
             NiaRequest::GetDefinedModifiers(
@@ -286,6 +299,15 @@ impl Serializable<NiaResponse, nia_protocol_rust::Response> for NiaResponse {
                 response.set_remove_device_by_name_response(
                     remove_keyboard_by_name,
                 );
+            }
+            NiaResponse::RemoveKeyboardById(
+                nia_remove_keyboard_by_id_response,
+            ) => {
+                let remove_keyboard_by_id =
+                    nia_remove_keyboard_by_id_response.to_pb();
+
+                response
+                    .set_remove_device_by_id_response(remove_keyboard_by_id);
             }
             NiaResponse::GetDefinedModifiers(
                 nia_get_defined_modifiers_response,

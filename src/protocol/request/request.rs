@@ -12,6 +12,7 @@ pub enum NiaRequest {
     DefineDevice(NiaDefineDeviceRequest),
     RemoveDeviceByPath(NiaRemoveDeviceByPathRequest),
     RemoveDeviceByName(NiaRemoveDeviceByNameRequest),
+    RemoveDeviceById(NiaRemoveDeviceByIdRequest),
     GetDefinedModifiers(NiaGetDefinedModifiersRequest),
     DefineModifier(NiaDefineModifierRequest),
     RemoveModifier(NiaRemoveModifierRequest),
@@ -48,6 +49,10 @@ make_from_implementation!(
 make_from_implementation!(
     NiaRemoveDeviceByNameRequest,
     NiaRequest::RemoveDeviceByName
+);
+make_from_implementation!(
+    NiaRemoveDeviceByIdRequest,
+    NiaRequest::RemoveDeviceById
 );
 make_from_implementation!(
     NiaGetDefinedModifiersRequest,
@@ -95,6 +100,11 @@ impl Serializable<NiaRequest, nia_protocol_rust::Request> for NiaRequest {
             NiaRequest::RemoveDeviceByName(remove_device_by_name_request) => {
                 request_pb.set_remove_device_by_name_request(
                     remove_device_by_name_request.to_pb(),
+                )
+            }
+            NiaRequest::RemoveDeviceById(remove_device_by_id_request) => {
+                request_pb.set_remove_device_by_id_request(
+                    remove_device_by_id_request.to_pb(),
                 )
             }
             NiaRequest::GetDefinedModifiers(get_defined_modifiers_request) => {
@@ -172,6 +182,12 @@ impl Serializable<NiaRequest, nia_protocol_rust::Request> for NiaRequest {
                     request_pb.take_remove_device_by_name_request(),
                 )?;
             NiaRequest::RemoveDeviceByName(remove_device_by_name_request)
+        } else if request_pb.has_remove_device_by_id_request() {
+            let remove_device_by_id_request =
+                NiaRemoveDeviceByIdRequest::from_pb(
+                    request_pb.take_remove_device_by_id_request(),
+                )?;
+            NiaRequest::RemoveDeviceById(remove_device_by_id_request)
         } else if request_pb.has_get_defined_modifiers_request() {
             let get_defined_modifiers_request =
                 NiaGetDefinedModifiersRequest::from_pb(

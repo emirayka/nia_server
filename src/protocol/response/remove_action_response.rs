@@ -96,8 +96,9 @@ impl
                     nia_protocol_rust::RemoveActionResponse_SuccessResult::new(
                     );
 
-                success_result
-                    .set_message(protobuf::Chars::from(String::from("")));
+                success_result.set_message(protobuf::Chars::from(
+                    String::from("Success."),
+                ));
                 remove_action_response.set_success_result(success_result);
             }
             NiaRemoveActionCommandResult::Error(error_message) => {

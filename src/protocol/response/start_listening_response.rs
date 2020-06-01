@@ -93,8 +93,9 @@ impl
                 let mut success_result =
                     nia_protocol_rust::StartListeningResponse_SuccessResult::new();
 
-                success_result
-                    .set_message(protobuf::Chars::from(String::from("")));
+                success_result.set_message(protobuf::Chars::from(
+                    String::from("Success."),
+                ));
                 start_listening_response.set_success_result(success_result);
             }
             NiaStartListeningCommandResult::Error(error_message) => {
