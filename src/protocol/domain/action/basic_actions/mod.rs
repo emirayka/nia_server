@@ -19,6 +19,7 @@ mod action_mouse_relative_move;
 
 mod action_execute_code;
 mod action_execute_function;
+mod action_execute_interpreter_value;
 mod action_execute_named_action;
 mod action_execute_os_command;
 mod action_text_type;
@@ -47,6 +48,7 @@ pub use action_mouse_relative_move::*;
 
 pub use action_execute_code::*;
 pub use action_execute_function::*;
+pub use action_execute_interpreter_value::*;
 pub use action_execute_named_action::*;
 pub use action_execute_os_command::*;
 pub use action_text_type::*;

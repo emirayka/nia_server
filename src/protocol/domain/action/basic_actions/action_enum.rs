@@ -28,6 +28,7 @@ pub enum NiaActionEnum {
     ExecuteFunction(ActionExecuteFunction),
     ExecuteOSCommand(ActionExecuteOSCommand),
     ExecuteNamedAction(ActionExecuteNamedAction),
+    ExecuteInterpreterValue(ActionExecuteInterpreterValue),
 }
 
 macro_rules! make_from_impl {
@@ -67,3 +68,5 @@ make_from_impl!(ActionExecuteCode, NiaActionEnum::ExecuteCode);
 make_from_impl!(ActionExecuteFunction, NiaActionEnum::ExecuteFunction);
 make_from_impl!(ActionExecuteOSCommand, NiaActionEnum::ExecuteOSCommand);
 make_from_impl!(ActionExecuteNamedAction, NiaActionEnum::ExecuteNamedAction);
+#[rustfmt::skip]
+make_from_impl!(ActionExecuteInterpreterValue, NiaActionEnum::ExecuteInterpreterValue);

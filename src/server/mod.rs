@@ -98,7 +98,24 @@ impl Server {
 
     pub fn start(self) {
         let mut server = self;
-        let mut interpreter = Interpreter::new();
+        let mut interpreter = Interpreter::with_default_config();
+
+        let devices = nia_interpreter_core::library::get_defined_devices_info(
+            &mut interpreter,
+        );
+
+        match devices {
+            Ok(devices) => {
+                for enabled_device in devices {
+                    for device in &mut server.devices_info {
+                        if enabled_device.get_id() == device.get_device_id() {
+                            device.set_defined(true)
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
 
         nia_interpreter_core::library::define_global_mapping(
             &mut interpreter,

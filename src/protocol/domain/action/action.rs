@@ -5,7 +5,7 @@ use crate::protocol::Serializable;
 use crate::protocol::{NiaActionEnum, NiaConvertable};
 
 use crate::protocol::domain::action::basic_actions::*;
-use nia_interpreter_core::Action;
+use nia_interpreter_core::{Action, SymbolId};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NiaAction {
@@ -141,6 +141,11 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                     action_execute_named_action.get_action_name(),
                 ))
             }
+            NiaActionEnum::ExecuteInterpreterValue(
+                action_execute_interpreter_value,
+            ) => nia_interpreter_core::Action::ExecuteFunctionValue(
+                nia_interpreter_core::Value::Symbol(SymbolId::new(0)),
+            ),
         };
 
         action
@@ -176,41 +181,27 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                 }
             }
 
-            Action::TextKeyClick(key_code) => {
-                NiaAction {
-                    action: ActionTextKeyClick::new(*key_code).into(),
-                }
-            }
-            Action::NumberKeyClick(key_code) => {
-                NiaAction {
-                    action: ActionNumberKeyClick::new(*key_code).into(),
-                }
-            }
-            Action::FunctionKeyClick(key_code) => {
-                NiaAction {
-                    action: ActionFunctionKeyClick::new(*key_code).into(),
-                }
-            }
-            Action::ControlKeyClick(key_code) => {
-                NiaAction {
-                    action: ActionControlKeyClick::new(*key_code).into(),
-                }
-            }
-            Action::KPKeyClick(key_code) => {
-                NiaAction {
-                    action: ActionKPKeyClick::new(*key_code).into(),
-                }
-            }
-            Action::MultimediaKeyClick(key_code) => {
-                NiaAction {
-                    action: ActionMultimediaKeyClick::new(*key_code).into(),
-                }
-            }
-            Action::MouseButtonKeyClick(key_code) => {
-                NiaAction {
-                    action: ActionMouseButtonKeyClick::new(*key_code).into(),
-                }
-            }
+            Action::TextKeyClick(key_code) => NiaAction {
+                action: ActionTextKeyClick::new(*key_code).into(),
+            },
+            Action::NumberKeyClick(key_code) => NiaAction {
+                action: ActionNumberKeyClick::new(*key_code).into(),
+            },
+            Action::FunctionKeyClick(key_code) => NiaAction {
+                action: ActionFunctionKeyClick::new(*key_code).into(),
+            },
+            Action::ControlKeyClick(key_code) => NiaAction {
+                action: ActionControlKeyClick::new(*key_code).into(),
+            },
+            Action::KPKeyClick(key_code) => NiaAction {
+                action: ActionKPKeyClick::new(*key_code).into(),
+            },
+            Action::MultimediaKeyClick(key_code) => NiaAction {
+                action: ActionMultimediaKeyClick::new(*key_code).into(),
+            },
+            Action::MouseButtonKeyClick(key_code) => NiaAction {
+                action: ActionMouseButtonKeyClick::new(*key_code).into(),
+            },
 
             nia_interpreter_core::Action::MouseAbsoluteMove(x, y) => {
                 NiaAction {
@@ -248,11 +239,11 @@ impl NiaConvertable<NiaAction, nia_interpreter_core::Action> for NiaAction {
                     action: ActionExecuteNamedAction::new(action_name).into(),
                 }
             }
-            nia_interpreter_core::Action::ExecuteFunctionValue(function_value) => {
-                return NiaServerError::interpreter_error(
-                    "It must not be possible to serialized execute function value action directly."
-                ).into()
-            }
+            nia_interpreter_core::Action::ExecuteFunctionValue(
+                function_value,
+            ) => NiaAction {
+                action: ActionExecuteInterpreterValue::new().into(),
+            },
         };
 
         Ok(action)
@@ -408,6 +399,16 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
                     action_execute_named_action_pb,
                 )
             }
+            NiaActionEnum::ExecuteInterpreterValue(
+                action_execute_interpreter_value,
+            ) => {
+                let action_execute_interpreter_value_pb =
+                    action_execute_interpreter_value.to_pb();
+
+                action_pb.set_action_execute_interpreter_value(
+                    action_execute_interpreter_value_pb,
+                )
+            }
         }
 
         action_pb
@@ -528,6 +529,14 @@ impl Serializable<NiaAction, nia_protocol_rust::Action> for NiaAction {
 
             ActionExecuteNamedAction::from_pb(action_execute_named_action_pb)?
                 .into()
+        } else if object_pb.has_action_execute_interpreter_value() {
+            let action_execute_interpreter_value_pb =
+                object_pb.take_action_execute_interpreter_value();
+
+            ActionExecuteInterpreterValue::from_pb(
+                action_execute_interpreter_value_pb,
+            )?
+            .into()
         } else {
             return NiaServerError::deserialization_error(
                 "Invalid action type.",
@@ -789,6 +798,18 @@ mod tests {
         #[test]
         fn serializes_and_deserializes_action_execute_named_action() {
             let action = ActionExecuteNamedAction::new("print-nya").into();
+
+            let expected = NiaAction { action };
+
+            let bytes = expected.to_bytes().unwrap();
+            let actual = NiaAction::from_bytes(bytes).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_execute_interpreter_value() {
+            let action = ActionExecuteInterpreterValue::new().into();
 
             let expected = NiaAction { action };
 
@@ -1059,6 +1080,19 @@ mod tests {
         fn serializes_and_deserializes_action_execute_named_action() {
             let action =
                 ActionExecuteNamedAction::new(String::from("print-nya")).into();
+
+            let expected = NiaAction { action };
+
+            let interpreter_action = expected.to_interpreter_repr();
+            let actual =
+                NiaAction::from_interpreter_repr(&interpreter_action).unwrap();
+
+            assert_eq!(expected, actual);
+        }
+
+        #[test]
+        fn serializes_and_deserializes_action_execute_interpreter_value() {
+            let action = ActionExecuteInterpreterValue::new().into();
 
             let expected = NiaAction { action };
 
